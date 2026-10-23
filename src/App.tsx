@@ -11,8 +11,9 @@ import { formattedVisitDate, imageUrl, regionName, regions, restaurants } from '
 import { useFoodState, type FoodStatus, type FoodStateController } from './state/useFoodState';
 import { useSharing, type SharingController } from './state/useSharing';
 import { LoginScreen, SessionScreen } from './components/LoginScreen';
+import { SharedFeed } from './components/SharedFeed';
 import { SharingPanel } from './components/SharingPanel';
-import { LocalPhotos, VisitTimeline } from './components/VisitTimeline';
+import { VisitTimeline } from './components/VisitTimeline';
 import { RankingFlow } from './components/RankingFlow';
 import { PhotoCarousel, PhotoViewer } from './components/PhotoGallery';
 const MapPane = lazy(async () => ({ default: (await import('./components/MapPane')).MapPane }));
@@ -173,7 +174,7 @@ function App() {
       <p>Your favorite restaurants, ranked.</p>
     </aside>
     <main className={`app-main page-${page}`}>
-      {page === 'feed' && <FeedPage name={displayName} food={food} getStatus={food.getStatus} onOpen={r => navTo('detail', r.id)} onSearch={() => navTo('search')} onList={() => navTo('lists')} onToast={setToast} />}
+      {page === 'feed' && <FeedPage sharing={sharing} food={food} getStatus={food.getStatus} onOpen={r => navTo('detail', r.id)} onSearch={() => navTo('search')} onList={() => navTo('lists')} onToast={setToast} />}
       {page === 'lists' && <>
         <TopBar title={<span className="eyebrow">MY LISTS</span>} right={<><button className="icon-button" onClick={share} aria-label="分享列表"><Share2 size={19} /></button><button className="icon-button" onClick={() => setFilterOpen(true)} aria-label="更多筛选"><Menu size={21} /></button></>} />
         <div className="lists-heading"><button className="heading-dropdown" onClick={() => setFilterOpen(true)}>Restaurants <ChevronDown size={18} /></button><span className="list-count">{sortedFiltered.length} 家</span></div>
@@ -226,8 +227,7 @@ function RestaurantRow({ r, status, score, onOpen, onStatus, compact = false }: 
 
 function EmptyList({ onReset }: { onReset: () => void }) { return <div className="empty-state"><Search size={28} /><h3>这里暂时没有餐厅</h3><p>换个地区或清除筛选看看。</p><button onClick={onReset}>清除筛选</button></div>; }
 
-function FeedPage({ name, food, getStatus, onOpen, onSearch, onList, onToast }: { name: string; food: FoodStateController; getStatus: (id: string) => FoodStatus; onOpen: (r: Restaurant) => void; onSearch: () => void; onList: () => void; onToast: (s: string) => void }) {
-  const [gallery, setGallery] = useState<{ restaurant: Restaurant; index: number } | null>(null);
+function FeedPage({ sharing, food, getStatus, onOpen, onSearch, onList, onToast }: { sharing: SharingController; food: FoodStateController; getStatus: (id: string) => FoodStatus; onOpen: (r: Restaurant) => void; onSearch: () => void; onList: () => void; onToast: (s: string) => void }) {
   const visited = [...restaurants].filter(r => getStatus(r.id) === 'been' && !r.closed).sort((a, b) => (b.visitedAt || '').localeCompare(a.visitedAt || ''));
   const wanted = restaurants.filter(r => getStatus(r.id) === 'want');
   const featured = [
@@ -240,8 +240,7 @@ function FeedPage({ name, food, getStatus, onOpen, onSearch, onList, onToast }: 
     <button className="search-field fake-input" onClick={onSearch}><Search size={18} /><span>Search restaurant, cuisine, occasion</span></button>
     <div className="feed-pills"><button onClick={onList}><Compass size={15} /> 探索列表</button><button onClick={() => document.getElementById('your-feed')?.scrollIntoView({ behavior: 'smooth' })}><Clock3 size={15} /> 最近记录</button><button onClick={onList}><Bookmark size={15} /> 想去</button></div>
     <section className="feed-section"><div className="section-head"><h2>FEATURED LISTS</h2><button onClick={onList}>See all <ChevronRight size={13} /></button></div><div className="featured-scroll">{featured.map(f => { const first = f.data.find(r => r.coverUrl); return <button className={`featured-card ${f.color}`} key={f.label} onClick={onList}>{first?.coverUrl && <img src={first.coverUrl} alt="" loading="lazy" />}<div className="featured-shade" /><strong>{f.label}</strong><span>{f.sub}</span></button>; })}</div></section>
-    <section className="feed-section feed-diary" id="your-feed"><div className="section-head"><h2>YOUR FEED</h2></div>{Object.entries(food.snapshot.visits).flatMap(([id, visits]) => visits.map(visit => ({ visit, r: restaurants.find(r => r.id === id)! }))).sort((a,b) => b.visit.recordedAt.localeCompare(a.visit.recordedAt)).map(({visit,r}) => <article className="feed-post" key={visit.id}><button className="post-head" onClick={() => onOpen(r)}><span className="mini-avatar">{name.charAt(0).toUpperCase()}</span><span><strong>{name} 又去了 {r.brand}</strong><small>{visit.branch || r.actualCity}</small></span><ChevronRight size={17}/></button><LocalPhotos ids={visit.photoIds} label={r.displayName}/>{visit.notes && <p className="post-review">{visit.notes}</p>}{visit.dishes.filter(Boolean).length > 0 && <p className="post-dishes"><strong>Favorite Dishes:</strong> {visit.dishes.filter(Boolean).join("、")}</p>}<div className="post-footer"><span>{visit.visitedAt || "日期未填写"}</span></div></article>)}{visited.slice(0, 24).map(r => <article className="feed-post" key={r.id}><button className="post-head" onClick={() => onOpen(r)}><span className="mini-avatar">{name.charAt(0).toUpperCase()}</span><span><strong>{name} 记录了 {r.brand}</strong><small><InfoLine r={r} /></small></span><ChevronRight size={17} /></button>{r.images.length > 0 && <PhotoCarousel className="feed-gallery" images={r.images} label={r.displayName} onOpen={index => setGallery({ restaurant: r, index })} />}{r.reviewText && <p className="post-review"><strong>Notes:</strong> {r.reviewText}</p>}{r.dishes.length > 0 && <p className="post-dishes"><strong>Favorite Dishes:</strong> {r.dishes.map(d => d.name).join('、')}</p>}<div className="post-footer"><span><Heart size={18} /> <Share2 size={18} /></span><span>{formattedVisitDate(r) || '访问日期未记录'}</span></div></article>)}</section>
-    {gallery && <PhotoViewer images={gallery.restaurant.images} label={gallery.restaurant.displayName} initialIndex={gallery.index} onClose={() => setGallery(null)} />}
+    <SharedFeed food={food} sharing={sharing} onOpen={onOpen}/>
   </>;
 }
 

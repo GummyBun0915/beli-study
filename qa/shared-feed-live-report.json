@@ -1,0 +1,13 @@
+{
+  "testedAt": "2026-10-23T03:18:15.027Z",
+  "base": "http://127.0.0.1:4178/beli-study/",
+  "fixture": false,
+  "passed": [
+    "real WXY and LHJ login",
+    "both viewers can read all members who have actual dining history",
+    "authors labelled correctly",
+    "shared feed leaves each personal snapshot/counts/leaderboard unchanged",
+    "no fabricated production records or writes"
+  ],
+  "errors": []
+}

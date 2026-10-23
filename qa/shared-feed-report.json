@@ -1,0 +1,17 @@
+{
+  "testedAt": "2026-10-23T04:41:22.689Z",
+  "base": "http://127.0.0.1:4178/beli-study/",
+  "fixture": true,
+  "passed": [
+    "both authors visible from either account",
+    "visits sorted by visit date",
+    "same restaurant and visit ID from different authors remain separate",
+    "each score derived from its author only",
+    "personal leaderboard unchanged",
+    "source history attributed only to owner",
+    "Been-only records retain author without copying another person notes or photos",
+    "partner realtime update appears without reload",
+    "reading shared feed does not mutate personal snapshot"
+  ],
+  "errors": []
+}

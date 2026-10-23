@@ -107,7 +107,7 @@ export function useSharing(food: FoodStateController) {
         .on('postgres_changes',{event:'*',schema:'public',table:'beli_states',filter:`space_id=eq.${space.id}`},update)
         .on('postgres_changes',{event:'*',schema:'public',table:'beli_wants',filter:`space_id=eq.${space.id}`},update)
         .on('postgres_changes',{event:'*',schema:'public',table:'beli_members',filter:`space_id=eq.${space.id}`},update)
-        .subscribe(state=>{if(!cancelled)setRealtimeStatus(state==='SUBSCRIBED'?'':state==='CHANNEL_ERROR'||state==='TIMED_OUT'?'实时连接中断，定期刷新':'正在连接实时更新');});
+        .subscribe(state=>{if(!cancelled&&state==='SUBSCRIBED')update();if(!cancelled)setRealtimeStatus(state==='SUBSCRIBED'?'':state==='CHANNEL_ERROR'||state==='TIMED_OUT'?'实时连接中断，定期刷新':'正在连接实时更新');});
     })().catch(()=>{if(!cancelled)setRealtimeStatus('实时连接中断，定期刷新');});
     const poll=window.setInterval(update,30000);window.addEventListener('focus',update);
     return()=>{cancelled=true;clearInterval(poll);window.removeEventListener('focus',update);if(channel)void client?.removeChannel(channel);};

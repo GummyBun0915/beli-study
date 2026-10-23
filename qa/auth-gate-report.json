@@ -1,12 +1,12 @@
 {
-  "testedAt": "2026-10-23T02:58:50.794Z",
-  "base": "https://gummybun0915.github.io/beli-study/",
+  "testedAt": "2026-10-23T04:41:31.729Z",
+  "base": "http://127.0.0.1:4178/beli-study/",
   "passed": [
     "all unauthenticated routes show login only",
     "no guest personal feed or navigation",
     "mobile and desktop login",
     "identity hydration blocks stale personal content",
-    "LHJ arrives at own feed",
+    "LHJ enters shared feed without inheriting WXY personal records",
     "logout returns to first-screen login"
   ],
   "errors": []

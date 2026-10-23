@@ -12,7 +12,8 @@
     "data:check": "node scripts/sync-source.mjs /Users/jiguang/Desktop/Personal/01_个人项目/dachitech --check",
     "test:ui": "node tests/ui.mjs",
     "data:verify": "node scripts/verify-import.mjs",
-    "test:auth": "node tests/auth-gate.mjs"
+    "test:auth": "node tests/auth-gate.mjs",
+    "test:feed": "node tests/shared-feed.mjs"
   },
   "dependencies": {
     "@maplibre/maplibre-gl-leaflet": "^0.1.4",

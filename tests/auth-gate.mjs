@@ -19,11 +19,11 @@ try{
   await page.getByRole('group',{name:'选择身份'}).getByRole('button',{name:'LHJ',exact:true}).click();
   await page.getByLabel('登录密码').fill('fixture-password');await page.getByRole('button',{name:'登录',exact:true}).click();
   await page.getByText('正在载入你的记录…',{exact:true}).waitFor();assert.equal(await page.locator('.feed-post,.bottom-nav').count(),0);
-  await page.locator('.feed-header').waitFor();assert.equal(await page.locator('.feed-post').count(),0);
+  await page.locator('.feed-header').waitFor();assert(await page.locator('.feed-post[data-author="WXY"]').count()>0);assert.equal(await page.locator('.feed-post[data-author="LHJ"]').count(),0);
   assert.equal(new URL(page.url()).hash,'#/feed');
   await page.goto(base+'#/profile');await page.locator('.profile-main').waitFor();assert.equal(await page.locator('.profile-name').innerText(),'LHJ');
   await page.getByRole('button',{name:'退出登录',exact:true}).click();await page.getByRole('group',{name:'选择身份'}).waitFor();assert.equal(await page.locator('.profile-main,.feed-post,.bottom-nav').count(),0);
   assert.deepEqual(errors,[]);
-  const report={testedAt:new Date().toISOString(),base,passed:['all unauthenticated routes show login only','no guest personal feed or navigation','mobile and desktop login','identity hydration blocks stale personal content','LHJ arrives at own feed','logout returns to first-screen login'],errors};
+  const report={testedAt:new Date().toISOString(),base,passed:['all unauthenticated routes show login only','no guest personal feed or navigation','mobile and desktop login','identity hydration blocks stale personal content','LHJ enters shared feed without inheriting WXY personal records','logout returns to first-screen login'],errors};
   fs.writeFileSync('qa/auth-gate-report.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
 }finally{await browser.close();}

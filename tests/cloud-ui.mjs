@@ -23,8 +23,9 @@ const login=async(page,name)=>{
 let toggled=false;
 try{
   await login(a,'WXY');await login(b,'LHJ');
-  assert.equal((await a.locator('.profile-metrics strong').allTextContents())[0],'67');
-  assert.equal((await b.locator('.profile-metrics strong').allTextContents())[0],'0');
+  const ownState=page=>page.evaluate(()=>localStorage.getItem('beli-dachitech:food-state:v2'));
+  const originalA=await ownState(a),originalB=await ownState(b);
+  const originalCountsB=await b.locator('.profile-metrics strong').allTextContents();
   const data=JSON.parse(fs.readFileSync('src/data/restaurants.generated.json','utf8')).restaurants;
   const restaurant=data.find(r=>r.brand.includes('寿司郎'));
   await b.goto(`${base}#/restaurant/${restaurant.id}`);
@@ -42,15 +43,18 @@ try{
   // Same browser switches from LHJ to WXY and back without inheriting personal visits.
   await login(b,'WXY');await b.getByRole('button',{name:'退出登录',exact:true}).click();
   await b.getByRole('group',{name:'选择身份'}).waitFor();await login(b,'LHJ');
-  assert.equal((await b.locator('.profile-metrics strong').allTextContents())[0],'0');
+  assert((await ownState(b))===originalB,'LHJ personal records changed unexpectedly');
   await b.reload();await b.getByRole('heading',{name:'Our dining space',exact:true}).waitFor();
   await b.locator('.sharing-title').getByText('已同步',{exact:true}).waitFor();
   assert.equal(await b.locator('.profile-avatar').innerText(),'L');
-  assert.equal((await b.locator('.profile-metrics strong').allTextContents())[0],'0');
-  const reopened=await contexts[1].newPage();await reopened.goto(base);await reopened.locator('.feed-header').waitFor();assert.equal(await reopened.getByRole('group',{name:'选择身份'}).count(),0);assert.equal(await reopened.locator('.feed-post').count(),0);await reopened.close();
+  assert((await ownState(b))===originalB,'LHJ personal records changed unexpectedly');
+  const reopened=await contexts[1].newPage();await reopened.goto(base);await reopened.locator('.feed-header').waitFor();assert.equal(await reopened.getByRole('group',{name:'选择身份'}).count(),0);assert(await reopened.locator('.feed-post[data-author="WXY"]').count()>0);await reopened.close();
+  assert((await ownState(a))===originalA,'WXY personal records changed unexpectedly');
+  assert.deepEqual(await b.locator('.profile-metrics strong').allTextContents(),originalCountsB);
+  await b.goto(`${base}#/feed`);await b.locator('.feed-post[data-author="WXY"]').first().waitFor();await b.screenshot({path:'qa/sharing-shared-feed-live.png',fullPage:false});await b.goto(`${base}#/profile`);await b.locator('.profile-main').waitFor();
   await a.screenshot({path:'qa/sharing-wxy-mobile.png',fullPage:false});await b.screenshot({path:'qa/sharing-lhj-mobile.png',fullPage:false});
   assert.deepEqual(errors,[]);
-  const report={testedAt:new Date().toISOString(),base,passed:['first-screen login before any personal UI','real WXY/LHJ browser login','one shared room','W/L profile identity','WXY original 67 Been, LHJ empty','wishlist add/remove arrives without refresh','same-browser account switch isolated','session and records retained after reload','new tab restores remembered login'],errors};
+  const report={testedAt:new Date().toISOString(),base,passed:['first-screen login before any personal UI','real WXY/LHJ browser login','one shared room','W/L profile identity','each account keeps its existing personal records and counts','LHJ can see WXY history in shared feed','wishlist add/remove arrives without refresh','same-browser account switch isolated','session and records retained after reload','new tab restores remembered login'],errors};
   fs.writeFileSync('qa/cloud-ui-report.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
 }finally{
   if(toggled){try{await b.getByRole('button',{name:'已加入一起想去',exact:true}).click();}catch{console.error('Shared test item needs cleanup');}}

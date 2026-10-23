@@ -1,6 +1,6 @@
 # Beli Study
 
-移动优先的美食记录 Web App，包含 Feed、多图浏览、餐厅列表/地图、搜索、重复用餐记录、个人比较排名和资料页。个人学习研究项目，非 Beli 官方服务。
+移动优先的美食记录 Web App，包含二人共同 Feed、多图浏览、餐厅列表/地图、搜索、重复用餐记录、个人比较排名和资料页。个人学习研究项目，非 Beli 官方服务。
 
 ## 启动
 
@@ -20,11 +20,12 @@ npm run dev
 npm run check
 npm run test:ui
 npm run test:auth
+npm run test:feed
 npm run build
 npm run preview
 ```
 
-交互测试使用拦截认证/数据库/实时连接的独立服务夹具，不访问生产数据；auth 测试验证未登录路由与加载期间不显示个人内容。真实共享联调单独使用 tests/cloud-ui.mjs。测试默认使用本机 Google Chrome；其他环境设置 `CHROME_PATH`。测试使用独立临时浏览器，不改动你正在使用的记录。
+交互测试使用拦截认证/数据库/实时连接的独立服务夹具，不访问生产数据；auth 测试验证未登录路由与加载期间不显示个人内容。共同 Feed 的作者/排序/评分隔离测试为 test:feed。真实共享联调单独使用 tests/cloud-ui.mjs，纯只读 Feed 验收为 tests/shared-feed-live.mjs。测试默认使用本机 Google Chrome；其他环境设置 `CHROME_PATH`。测试使用独立临时浏览器，不改动你正在使用的记录。
 
 ## 当前边界
 

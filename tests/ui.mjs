@@ -36,7 +36,7 @@ try{
   const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('beli-dachitech:food-state:v2')));
   assert.equal(state.visits[first.id].length,3);assert.equal(state.visits[second.id].length,1);
   assert.equal(state.order.length,2);assert.equal(state.order[0],second.id);
-  await route('rank');assert.equal(await page.locator('.rank-item').count(),2);await page.screenshot({path:'qa/rank-mobile.png'});
+  await route('rank');await page.locator('.rank-item').nth(1).waitFor();assert.equal(await page.locator('.rank-item').count(),2);await page.screenshot({path:'qa/rank-mobile.png'});
   await route(`restaurant/${first.id}`);await page.screenshot({path:'qa/visits-mobile.png',fullPage:true});
   await page.getByRole('button',{name:'重新排名',exact:true}).click();await page.getByRole('button',{name:'I liked it!',exact:true}).click();await page.getByRole('button',{name:/下一步/}).click();await page.screenshot({path:'qa/ranking-compare-mobile.png'});await page.locator('.ranking-pair button').last().click();await page.getByRole('button',{name:'Done',exact:true}).click();
   const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('beli-dachitech:food-state:v2')));assert.equal(after.visits[first.id].length,3);

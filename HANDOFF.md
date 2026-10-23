@@ -4,6 +4,8 @@
 
 ## 当前结论
 
+- 首页现为共同用餐 Feed，混排 WXY/LHJ 的独立 VisitEntry，并标明作者。原历史只归 source 基线拥有者；个人评分、状态与榜单未合并。实现及本地真实账号只读验收通过；线上发布以 main 的 Actions 结果为准。
+
 - 仓库：<https://github.com/GummyBun0915/beli-study>，分支 main。
 - 网站：<https://gummybun0915.github.io/beli-study/>，GitHub Pages 自动部署。
 - Claude 的 4c42489 / addee98 已完成首次发布；本轮 Codex 修复已发布，代码提交 a0dad4e，Actions 39890211948 成功；真实两账号、共享数据库、实时消息、照片权限及线上浏览器验证均已通过。
@@ -24,7 +26,7 @@
 
 ## 本轮修复
 
-0. 独立 LoginScreen 与会话/用户数据加载门禁；Profile 不再承载未登录表单。Feed 标明已登录用户名字。`npm run test:auth` 验证所有未登录 hash 路由及载入期间无个人内容；登录状态由 Supabase 持久会话恢复，不保存密码。
+0. 独立 LoginScreen 与会话/用户数据加载门禁；Profile 不再承载未登录表单。Feed 标明每条记录作者的名字。`npm run test:auth` 验证所有未登录 hash 路由及载入期间无个人内容；登录状态由 Supabase 持久会话恢复，不保存密码。
 
 1. 创建者头像由姓名首字母生成，不再要求 WXY 必须先创建；增量迁移 `supabase/migrations/20261023_creator_avatar.sql` 已在线执行成功，原始 setup.sql 同步修正。
 2. 登录先等本人云端记录加载，切换账号按 user ID 分开缓存，旧身份待同步任务失效；退出仅结束当前设备会话并清空当前显示记录。
@@ -36,6 +38,8 @@
 8. 私人账号截图与控制台截图留本地并忽略，不上传公开仓库。原 qa 页面图为测试上下文的视觉证据，可以保留；公开参考原图仍仅本地保存，manifest 跟踪来源。
 
 ## 已验证与证据
+
+- `qa/shared-feed-report.json`：隔离夹具验证双作者混排、同店不同作者/相同 visit ID 不碰撞、各自分数/榜单不混用、伙伴实时更新及查看 Feed 不修改个人快照。`qa/shared-feed-live-report.json`：真实账号只读核对现有贡献者及个人快照/计数/榜单不变；不往生产空间添加示例记录。
 
 - `qa/cloud-service-report.json`：真实 WXY/LHJ 密码登录；二人成员关系与 W/L；本人快照持久化；旧 revision 被拒；匿名读表、直接跨用户写入/插入、非成员空间 RPC 被拒；共同清单 Realtime；私有照片成员下载、匿名拒绝、对方不能覆盖/删除所有者照片。
 - `qa/auth-gate-report.json`：所有未登录路由只渲染登录页，加载期间无个人内容，退出回登录页；base 为正式线上地址。

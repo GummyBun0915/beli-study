@@ -412,3 +412,8 @@ h1,h2,h3,p { margin-top: 0; }
 .login-status .text-button { margin-top:20px; }
 @keyframes login-enter { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
 @media(prefers-reduced-motion:reduce) { .login-content { animation:none; } .login-identities > button { transition:none; } }
+
+.feed-author-score { color:var(--teal); font-size:11px; }
+.feed-author-score b { margin-left:4px; font-size:15px; font-weight:700; }
+.feed-more { display:flex; align-items:center; justify-content:center; gap:8px; width:calc(100% - 40px); min-height:46px; margin:16px 20px; border:1px solid var(--line); border-radius:6px; background:white; color:var(--teal); font-size:13px; }
+.feed-empty { padding:20px; font-size:13px; color:var(--muted); }

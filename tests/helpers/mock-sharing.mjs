@@ -3,15 +3,15 @@
 const empty=baseline=>({version:2,baseline,statuses:{},logs:{},order:[],visits:{},history:[]});
 const users={WXY:'00000000-0000-4000-8000-000000000001',LHJ:'00000000-0000-4000-8000-000000000002'};
 const room='00000000-0000-4000-8000-000000000010';
-export async function mockSharing(page,{loggedIn=true,preferLocalSnapshot=false,delayMs=0}={}){
-  let identity='WXY';const states={WXY:empty('source'),LHJ:empty('empty')};let revision=1;
+export async function mockSharing(page,{loggedIn=true,preferLocalSnapshot=false,delayMs=0,initialIdentity='WXY',snapshots={}}={}){
+  let identity=initialIdentity;const states={WXY:empty('source'),LHJ:empty('empty'),...structuredClone(snapshots)};let revision=1;const sockets=[];
   const session=name=>{
     const user={id:users[name],email:`${name.toLowerCase()}@beli.example.com`,aud:'authenticated',role:'authenticated',app_metadata:{},user_metadata:{},created_at:'2026-10-22T00:00:00Z'};
     const exp=Math.floor(Date.now()/1000)+86400;
     const jwt=[{alg:'HS256',typ:'JWT'},{sub:user.id,role:'authenticated',exp,email:user.email}].map(v=>Buffer.from(JSON.stringify(v)).toString('base64url')).join('.')+'.test-signature';
     return{access_token:jwt,refresh_token:'browser-fixture-refresh',expires_in:86400,expires_at:exp,token_type:'bearer',user};
   };
-  if(loggedIn)await page.addInitScript(value=>{localStorage.setItem('sb-avxxytxplxqfkofqchrn-auth-token',JSON.stringify(value));},session('WXY'));
+  if(loggedIn)await page.addInitScript(value=>{localStorage.setItem('sb-avxxytxplxqfkofqchrn-auth-token',JSON.stringify(value));},session(initialIdentity));
   await page.route('**/auth/v1/**',async route=>{
     const url=new URL(route.request().url());
     if(url.pathname.endsWith('/logout'))return route.fulfill({json:{}});
@@ -33,10 +33,15 @@ export async function mockSharing(page,{loggedIn=true,preferLocalSnapshot=false,
     await route.fulfill({json:result});
   });
   await page.routeWebSocket('**/realtime/v1/**',socket=>{
+    const connection={socket,topic:'',bindings:[],active:true,array:false,joinRef:null};sockets.push(connection);socket.onClose(()=>{connection.active=false;});
+    // realtime-js 2.x may use the v2 array frame [join_ref, ref, topic, event, payload] or the v1 object frame.
     socket.onMessage(raw=>{
-      const message=JSON.parse(String(raw));
-      if(message.event==='phx_join')socket.send(JSON.stringify({topic:message.topic,event:'phx_reply',payload:{status:'ok',response:{postgres_changes:(message.payload.config?.postgres_changes||[]).map((entry,id)=>({...entry,id}))}},ref:message.ref}));
-      if(message.event==='heartbeat')socket.send(JSON.stringify({topic:'phoenix',event:'phx_reply',payload:{status:'ok',response:{}},ref:message.ref}));
+      const parsed=JSON.parse(String(raw));const array=Array.isArray(parsed);
+      const message=array?{join_ref:parsed[0],ref:parsed[1],topic:parsed[2],event:parsed[3],payload:parsed[4]}:parsed;
+      const reply=(topic,payload,ref)=>socket.send(JSON.stringify(array?[message.join_ref,ref,topic,'phx_reply',payload]:{topic,event:'phx_reply',payload,ref}));
+      if(message.event==='phx_join'){const bindings=(message.payload.config?.postgres_changes||[]).map((entry,id)=>({...entry,id:id+1}));Object.assign(connection,{topic:message.topic,bindings,array,joinRef:message.join_ref});reply(message.topic,{status:'ok',response:{postgres_changes:bindings}},message.ref);}
+      if(message.event==='heartbeat')reply('phoenix',{status:'ok',response:{}},message.ref);
     });
   });
+  return {async publishSnapshot(name,snapshot){for(let i=0;i<100&&!sockets.some(c=>c.active&&c.bindings.some(b=>b.table==='beli_states'));i++)await new Promise(resolve=>setTimeout(resolve,10));await new Promise(resolve=>setTimeout(resolve,100));states[name]=structuredClone(snapshot);for(const {socket,topic,bindings,array,joinRef} of sockets.filter(c=>c.active)){const ids=bindings.filter(b=>b.table==='beli_states').map(b=>b.id);if(ids.length){const payload={ids,data:{schema:'public',table:'beli_states',type:'UPDATE',commit_timestamp:new Date().toISOString(),columns:[],record:{user_id:users[name],payload:states[name],revision:++revision},old_record:{}}};socket.send(JSON.stringify(array?[joinRef,null,topic,'postgres_changes',payload]:{topic,event:'postgres_changes',payload}));};}}};
 }
