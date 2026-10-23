@@ -8,11 +8,11 @@ import {
 } from 'lucide-react';
 import type { Restaurant } from './data/restaurants';
 import { formattedVisitDate, imageUrl, mergePlaces, regionName, regions, restaurants, type PlaceRecord } from './data/restaurants';
-import { amapConfigured, searchPlaces } from './lib/amap';
 import { useFoodState, type FoodStatus, type FoodStateController } from './state/useFoodState';
 import { useSharing, type SharingController } from './state/useSharing';
 import { LoginScreen, SessionScreen } from './components/LoginScreen';
 import { SharedFeed } from './components/SharedFeed';
+import { AddPlace } from './components/AddPlace';
 import { SharingPanel } from './components/SharingPanel';
 import { VisitTimeline } from './components/VisitTimeline';
 import { RankingFlow } from './components/RankingFlow';
@@ -251,25 +251,8 @@ function FeedPage({ catalog, sharing, food, getStatus, onOpen, onSearch, onList,
 function SearchPage({ catalog, onAddPlace, query, onQuery, onOpen, getStatus, getScore, onRate }: { catalog: Restaurant[]; onAddPlace: (place: PlaceRecord) => void; query: string; onQuery: (q: string) => void; onOpen: (r: Restaurant) => void; getStatus: (id: string) => FoodStatus; getScore: (id: string) => number | null; onRate: (r: Restaurant) => void }) {
   const [searchCity, setSearchCity] = useState('all');
   const matches = useMemo(() => catalog.filter(r => (searchCity === 'all' || r.regionSlug === searchCity) && (!query.trim() || `${r.searchText} ${r.reviewText.toLocaleLowerCase()}`.includes(query.trim().toLocaleLowerCase()))).sort((a, b) => (a.closed === b.closed ? 0 : a.closed ? 1 : -1) || a.displayName.localeCompare(b.displayName, 'zh-CN')), [catalog, query, searchCity]);
-  const known = useMemo(() => new Set(catalog.map(r => r.id)), [catalog]);
-  const [amap, setAmap] = useState<{ key: string; loading: boolean; results: PlaceRecord[]; error: string } | null>(null);
-  const amapKey = `${searchCity}|${query.trim()}`;
-  const runAmap = () => {
-    const keyword = query.trim(); if (!keyword) return;
-    setAmap({ key: amapKey, loading: true, results: [], error: '' });
-    searchPlaces(keyword, searchCity === 'all' ? undefined : regionName(searchCity))
-      .then(results => setAmap(current => current?.key === amapKey ? { ...current, loading: false, results } : current))
-      .catch((error: unknown) => setAmap(current => current?.key === amapKey ? { ...current, loading: false, error: error instanceof Error ? error.message : '高德搜索失败' } : current));
-  };
-  const amapState = amap?.key === amapKey ? amap : null;
-  const amapSection = amapConfigured && query.trim() ? <section className="amap-search" aria-label="高德搜索">
-    {!amapState ? <button className="amap-trigger" onClick={runAmap}><MapPin size={16} /><span>没找到？在高德搜索「{query.trim()}」<small>{searchCity === 'all' ? '全国' : regionName(searchCity)} · 只搜餐饮</small></span><ChevronRight size={16} /></button>
-      : amapState.loading ? <p className="amap-status">正在搜索高德…</p>
-      : amapState.error ? <p className="amap-status error">{amapState.error} <button onClick={runAmap}>重试</button></p>
-      : !amapState.results.length ? <p className="amap-status">高德也没有找到匹配的餐厅。</p>
-      : <><div className="search-results-title"><strong>高德 · {amapState.results.length} 个结果</strong></div><div className="restaurant-list">{amapState.results.map(place => <article key={place.id} className="restaurant-row amap-row"><div className="row-main"><span className="row-text"><strong>{place.name}</strong><span className="info-line">{[place.city.replace(/市$/, ''), place.district, place.type.split(';').at(-1)].filter(Boolean).join(' · ')}</span>{place.address && <small className="amap-address">{place.address}</small>}</span></div><div className="row-actions">{known.has(place.id) ? <button onClick={() => onOpen(catalog.find(r => r.id === place.id)!)}>已添加 · 查看 <ArrowRight size={15} /></button> : <button onClick={() => onAddPlace(place)}>添加这家 <CirclePlus size={15} /></button>}</div></article>)}</div></>}
-  </section> : null;
-  return <><TopBar title={<span className="eyebrow">SEARCH</span>} /><div className="search-page-head"><h1>Find Dining.</h1><p>寻找下一顿喜欢的味道。</p></div><label className="search-field"><Search size={20} /><input autoFocus type="search" placeholder="店名、菜系、菜品、地区" value={query} onChange={e => onQuery(e.target.value)} />{query && <button onClick={() => onQuery('')} aria-label="清除搜索"><X size={16} /></button>}</label><div className="city-scroll"><button className={searchCity === 'all' ? 'active' : ''} onClick={() => setSearchCity('all')}>全部</button>{regions.map(r => <button className={searchCity === r.slug ? 'active' : ''} key={r.slug} onClick={() => setSearchCity(r.slug)}>{r.name}</button>)}</div><div className="search-results-title"><strong>{matches.length} 家餐厅</strong></div>{matches.length ? <div className="restaurant-list">{matches.map(r => <article key={r.id} className="restaurant-row search-row"><button className="row-main" onClick={() => onOpen(r)}><span className="row-text"><strong>{r.displayName}</strong><InfoLine r={r} /><span className="row-tags"><span>{getStatus(r.id) === 'been' ? '去过' : getStatus(r.id) === 'want' ? '想去' : '未记录'}</span>{r.closed && <span>已停业</span>}</span></span>{getScore(r.id) !== null ? <b className="score-badge">{getScore(r.id)!.toFixed(1)}</b> : <ChevronRight size={18} />}</button><div className="row-actions"><span>{formattedVisitDate(r) || "日期未记录"}</span><button onClick={() => onRate(r)}>打分 <ArrowRight size={15} /></button></div></article>)}</div> : <div className="empty-state"><Search size={28} /><h3>没有找到匹配餐厅</h3><p>{amapSection ? '可以在下方用高德搜索并添加。' : '试试其他店名或菜系。'}</p></div>}{amapSection}</>;
+  const addPlace = <AddPlace query={query} searchCity={searchCity} catalog={catalog} onAdd={onAddPlace} onOpen={onOpen} />;
+  return <><TopBar title={<span className="eyebrow">SEARCH</span>} /><div className="search-page-head"><h1>Find Dining.</h1><p>寻找下一顿喜欢的味道。</p></div><label className="search-field"><Search size={20} /><input autoFocus type="search" placeholder="店名、菜系、菜品、地区" value={query} onChange={e => onQuery(e.target.value)} />{query && <button onClick={() => onQuery('')} aria-label="清除搜索"><X size={16} /></button>}</label><div className="city-scroll"><button className={searchCity === 'all' ? 'active' : ''} onClick={() => setSearchCity('all')}>全部</button>{regions.map(r => <button className={searchCity === r.slug ? 'active' : ''} key={r.slug} onClick={() => setSearchCity(r.slug)}>{r.name}</button>)}</div><div className="search-results-title"><strong>{matches.length} 家餐厅</strong></div>{matches.length ? <div className="restaurant-list">{matches.map(r => <article key={r.id} className="restaurant-row search-row"><button className="row-main" onClick={() => onOpen(r)}><span className="row-text"><strong>{r.displayName}</strong><InfoLine r={r} /><span className="row-tags"><span>{getStatus(r.id) === 'been' ? '去过' : getStatus(r.id) === 'want' ? '想去' : '未记录'}</span>{r.closed && <span>已停业</span>}</span></span>{getScore(r.id) !== null ? <b className="score-badge">{getScore(r.id)!.toFixed(1)}</b> : <ChevronRight size={18} />}</button><div className="row-actions"><span>{formattedVisitDate(r) || "日期未记录"}</span><button onClick={() => onRate(r)}>打分 <ArrowRight size={15} /></button></div></article>)}</div> : <div className="empty-state"><Search size={28} /><h3>没有找到匹配餐厅</h3><p>{query.trim() ? '可以在下方搜索并添加这家店。' : '试试其他店名或菜系。'}</p></div>}{addPlace}</>;
 }
 
 function RankPage({ ranked, totalBeen, onOpen, onExplore, onCompare, onUndo, hasComparisons }: { ranked: ReturnType<typeof useFoodState>['ranked']; totalBeen: number; onOpen: (r: Restaurant) => void; onExplore: () => void; onCompare: () => void; onUndo: () => void; hasComparisons: boolean }) {

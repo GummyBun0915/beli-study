@@ -97,11 +97,14 @@ export const guideLabel: Record<GuideLevel, string> = {
 };
 
 const overseasRegions = new Set(['japan', 'singapore', 'thailand']);
+export const isOverseasRegion = (slug: string): boolean => overseasRegions.has(slug);
+const regionByCountry: Record<string, string> = { JP: 'japan', SG: 'singapore', TH: 'thailand' };
+export const regionCountry = (slug: string): string | undefined => Object.keys(regionByCountry).find(code => regionByCountry[code] === slug);
 const pi = Math.PI;
 const a = 6378245.0;
 const ee = 0.00669342162296594323;
 
-function outsideChina(lng: number, lat: number): boolean {
+export function outsideChina(lng: number, lat: number): boolean {
   return lng < 73.66 || lng > 135.05 || lat < 3.86 || lat > 53.55;
 }
 
@@ -121,7 +124,7 @@ function transformLng(x: number, y: number): number {
   return result;
 }
 
-function wgs84ToGcj02(lng: number, lat: number): { lng: number; lat: number } {
+export function wgs84ToGcj02(lng: number, lat: number): { lng: number; lat: number } {
   if (outsideChina(lng, lat)) return { lng, lat };
   let dLat = transformLat(lng - 105, lat - 35);
   let dLng = transformLng(lng - 105, lat - 35);
@@ -163,20 +166,26 @@ export interface Restaurant extends PublishedRestaurant {
   place?: PlaceRecord;
 }
 
-/** A restaurant added from AMap POI search; stored inside the adder's synced snapshot. */
+/** A restaurant a member added (AMap / OpenStreetMap search, or typed in); stored inside the adder's synced snapshot. */
 export interface PlaceRecord {
+  /** `<source>:<source id>` */
   id: string;
+  source: PlaceSource;
   poiId: string;
   name: string;
   address: string;
   city: string;
   district: string;
   type: string;
+  /** ISO 3166 alpha-2, '' when unknown. */
+  country: string;
+  /** GCJ-02 for amap, WGS-84 otherwise. */
   lng: number | null;
   lat: number | null;
   addedAt: string;
 }
-export const isPlaceId = (id: string): boolean => /^amap:[A-Za-z0-9]{1,40}$/.test(id);
+export type PlaceSource = 'amap' | 'osm' | 'manual';
+export const isPlaceId = (id: string): boolean => /^(amap|osm|manual):[A-Za-z0-9]{1,40}$/.test(id);
 
 /** Published image paths omit the site root. */
 export const imageUrl = (relativePath: string): string => /^(blob:|data:|https?:)/.test(relativePath) ? relativePath : `${import.meta.env.BASE_URL}${relativePath}`;
@@ -210,18 +219,25 @@ function normalize(record: PublishedRestaurant): Restaurant {
 
 export const restaurants: Restaurant[] = data.restaurants.map(normalize);
 
-/** AMap POIs carry GCJ-02 coordinates; they start as no-status for everyone. */
+/** Added places start as no-status for everyone. */
 export function placeToRestaurant(place: PlaceRecord): Restaurant {
-  const region = regions.find(r => place.city.startsWith(r.name) || r.name.startsWith(place.city.replace(/市$/, '')));
+  const city = place.city.replace(/市$/, '');
+  const region = regions.find(r => r.slug === regionByCountry[place.country])
+    ?? (city ? regions.find(r => city.startsWith(r.name) || r.name.startsWith(city)) : undefined);
   const kind = place.type.split(';').filter(Boolean).at(-1) || '';
+  const address = [place.district, place.address].filter(Boolean).join(' ');
+  const query = encodeURIComponent(`${place.name} ${place.address || city}`.trim());
+  const inChina = place.source === 'amap' || place.country === 'CN' || (!place.country && !!region && !overseasRegions.has(region.slug));
   return { ...normalize({
-    id: place.id, slug: place.id, regionSlug: region?.slug ?? (place.city.replace(/市$/, '') || '其他'), actualCity: place.city.replace(/市$/, ''),
+    id: place.id, slug: place.id, regionSlug: region?.slug ?? (city || '其他'), actualCity: city,
     brand: place.name, branch: null, category: kind || null, cuisineTags: kind ? [kind] : [], reviewText: '', dishes: [],
     score10: null, scoreScope: 'none', recommendationLevel: 'daiChi', visitedAt: null, visitedAtPrecision: null, inRecent: false,
-    multiShop: false, amapQuery: encodeURIComponent(`${place.name} ${place.address}`.trim()), lng: place.lng, lat: place.lat,
-    coordSystem: place.lng === null ? null : 'GCJ02', poiConfidence: 'amap', closed: false, avgPrice: null, branches: [],
-    address: [place.district, place.address].filter(Boolean).join(' '), contentUpdatedAt: place.addedAt, images: [], coverImage: null,
-  }), status: 'want', isVisited: false, isWantToTry: false, place };
+    multiShop: false, amapQuery: query, lng: place.lng, lat: place.lat,
+    coordSystem: place.lng === null ? null : place.source === 'amap' ? 'GCJ02' : 'WGS84', poiConfidence: place.source, closed: false, avgPrice: null, branches: [],
+    address, contentUpdatedAt: place.addedAt, images: [], coverImage: null,
+  }), status: 'want', isVisited: false, isWantToTry: false, place,
+  navigationUrl: inChina ? `https://uri.amap.com/search?keyword=${query}` : `https://www.google.com/maps/search/?api=1&query=${query}`,
+  navigationProvider: inChina ? '高德地图' : 'Google 地图' };
 }
 
 /** `base` plus any places it does not already contain. */

@@ -1,5 +1,5 @@
 {
-  "testedAt": "2026-10-23T04:53:34.059Z",
+  "testedAt": "2026-10-23T05:01:12.915Z",
   "base": "http://127.0.0.1:4178/beli-study/",
   "passed": [
     "all unauthenticated routes show login only",

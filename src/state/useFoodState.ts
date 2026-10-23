@@ -49,8 +49,10 @@ function cleanPlaces(input: unknown): Record<string, PlaceRecord> {
   for (const [id, value] of Object.entries(input as Record<string, Partial<PlaceRecord>>).slice(0, 2000)) {
     if (!isPlaceId(id) || !value || typeof value.name !== 'string' || !value.name.trim()) continue;
     const lng = coord(value.lng), lat = coord(value.lat);
-    result[id] = { id, poiId: id.slice(5), name: value.name.slice(0, 120), address: str(value.address, 300), city: str(value.city, 40),
-      district: str(value.district, 40), type: str(value.type, 120), lng: lat === null ? null : lng, lat: lng === null ? null : lat, addedAt: str(value.addedAt, 40) };
+    const [source, poiId] = id.split(':') as [PlaceRecord['source'], string];
+    result[id] = { id, source, poiId, name: value.name.slice(0, 120), address: str(value.address, 300), city: str(value.city, 60),
+      district: str(value.district, 60), type: str(value.type, 120), country: str(value.country, 2).toUpperCase() || (source === 'amap' ? 'CN' : ''),
+      lng: lat === null ? null : lng, lat: lng === null ? null : lat, addedAt: str(value.addedAt, 40) };
   }
   return result;
 }

@@ -1,5 +1,5 @@
 {
-  "testedAt": "2026-10-23T04:53:24.448Z",
+  "testedAt": "2026-10-23T05:01:29.749Z",
   "base": "http://127.0.0.1:4178/beli-study/",
   "fixture": true,
   "passed": [
@@ -8,7 +8,10 @@
     "place and status persist in own snapshot across reload",
     "added place appears in local search and is marked as added",
     "partner sees place in shared feed without it being copied",
-    "acting on partner place copies the place but not the ranking"
+    "acting on partner place copies the place but not the ranking",
+    "overseas OpenStreetMap search filtered to the region country, credited, mapped to JP region",
+    "manual add without coordinates",
+    "AMap basemap with GCJ-02 pins and explicit center; localhost defaults to OSM"
   ],
   "errors": []
 }

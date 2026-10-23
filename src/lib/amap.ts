@@ -9,7 +9,7 @@ export const amapConfigured = Boolean(key);
 declare global { interface Window { AMap?: any; _AMapSecurityConfig?: { securityJsCode: string } } }
 
 let loading: Promise<any> | null = null;
-function loadAmap(): Promise<any> {
+export function loadAmap(): Promise<any> {
   if (!key) return Promise.reject(new Error('高德搜索尚未配置'));
   if (window.AMap?.PlaceSearch) return Promise.resolve(window.AMap);
   loading ??= new Promise((resolve, reject) => {
@@ -30,7 +30,7 @@ function toPlace(poi: any, addedAt: string): PlaceRecord | null {
   const lat = Number(poi.location?.lat ?? poi.location?.getLat?.());
   const located = Number.isFinite(lng) && Number.isFinite(lat) && (lng !== 0 || lat !== 0);
   const text = (value: unknown) => typeof value === 'string' ? value : '';
-  return { id: `amap:${poiId}`, poiId, name: poi.name, address: text(poi.address), city: text(poi.cityname) || text(poi.pname),
+  return { id: `amap:${poiId}`, source: 'amap', country: 'CN', poiId, name: poi.name, address: text(poi.address), city: text(poi.cityname) || text(poi.pname),
     district: text(poi.adname), type: text(poi.type), lng: located ? lng : null, lat: located ? lat : null, addedAt };
 }
 
