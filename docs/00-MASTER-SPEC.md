@@ -19,6 +19,6 @@ Feed、餐厅搜索、Been/Want to Try、城市/菜系/价格筛选、地图/列
 
 ## 仍需外部条件
 
-- Supabase Free 项目 beli-private、WXY / LHJ 两个已确认账号与数据库初始化已完成；前端环境配置、站点地址及线上两账号/RLS/Storage/Realtime 验证待完成。当前云端功能未实际联调。接力入口为根目录 HANDOFF.md。
+- Supabase Free 项目 beli-private 已接入前端（.env.production 提交公开 URL + publishable key），公开注册关闭、匿名访问表被拒已核实；两账号登录/RLS/Storage/Realtime 实测待用户完成。
 - 同一 Beli build 的完整登录后原始截图/录屏，用于详情、交互状态和动画逐项验收。
-- GitHub 新公开仓库 GummyBun0915/beli-study 已创建，目前仅 initial commit；本地应用源码尚未推送，Pages 未部署。
+- GitHub 仓库 GummyBun0915/beli-study 已推送完整源码，Pages（Actions 构建）已上线：<https://gummybun0915.github.io/beli-study/>（GitHub Pages，push main 自动部署）。

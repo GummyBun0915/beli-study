@@ -1,6 +1,16 @@
 # Beli Study 接力交接
 
-更新：2026-10-22（Asia/Shanghai）。用户因额度将尽，要求先保存交接，稍后交给 Claude 继续。**此时暂停配置/发布操作；下次获用户继续指令后从本文待办接手。**
+更新：2026-10-23（Claude 接力完成发布）。
+
+## 0. 当前结论（优先读这一节，下方 §2–§3 为 10-22 的历史状态）
+
+- **已上线**：<https://gummybun0915.github.io/beli-study/>，仓库 <https://github.com/GummyBun0915/beli-study>，main 推送即由 `.github/workflows/pages.yml` 部署。
+- 连接配置改为提交 `.env.production`（Project URL + publishable key，本就会进前端 bundle）；workflow 不再读 Actions Variables。`.env.local` 仍忽略。
+- 已用 publishable key 核实：`disable_signup=true`、邮箱登录开、匿名关；未登录读 `beli_spaces` 返回 42501。
+- 线上跑 `TEST_URL=<上线地址> npm run test:ui` 全过，零页面错误；图片/图标 200。
+- 本机 gh 现有两个账号，推送 0915 仓库前确认 `gh auth status`；推送命令：`git -c credential.helper= -c "credential.helper=!gh auth git-credential" push origin main`。
+- **未完成，需用户亲手**（Claude 不代输密码）：①WXY 在 Profile → Private space 登录并“创建空间”（必须 WXY 先建，头像默认 W）；②复制邀请码，LHJ 在另一设备/无痕窗口登录后粘贴加入；③互测共享想去清单同步、各自评分不互相覆盖、刷新保留。出错把 Profile 面板的报错文字发给 Claude。
+- 可选：Supabase Auth → URL Configuration 的 Site URL 尚未设（密码登录不依赖）。
 
 ## 1. 接力目标与边界
 
