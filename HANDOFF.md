@@ -81,3 +81,11 @@ GitHub connector 已认证为 GummyBun0915，有目标仓库 push/admin 权限�
 - 8e06efe：发布 Codex 未提交的两人共享 Feed；修测试夹具以兼容 realtime-js v2 数组帧（App 本身无问题），ui 测试在计数排名前等待列表渲染。
 - 本轮：Feed「OUR FEED」右侧和空状态加「记录一餐」入口（跳 Search）；详情页「去过 / 想去」改为二选一状态组，「再去了一次 / 记录用餐」降为次级整行按钮；已去过但未排名时显示「还没排名」引导，走 rerank 模式（不新增到访）。
 - 「再去了一次」「一起想去」「两人 Feed」均为用户要求的 CUSTOM-EXTENSION，不是 Beli 原版组件；顶部 RESTAURANT 标题与原版差异仍 UNVERIFIED（缺登录后原版截图）。
+
+## 2026-10-23 高德 POI 加店（e3f9bfc）
+
+- Search 输入关键词后出现「没找到？在高德搜索」，按需调用高德 JS API 2.0 `PlaceSearch`（类型限「餐饮服务」；选了城市则 citylimit）。`src/lib/amap.ts`。
+- 加的店以 `amap:<POI ID>` 存进**添加者自己的** snapshot `places`（`src/state/useFoodState.ts`），随 beli_states 同步，**未改数据库结构**。App 的 catalog = 静态 75 家 + 自己的 places + 对方 snapshot 里的 places（`mergePlaces`）。对方的店只在自己标记/记录/一起想去时复制进自己的 places，排名不复制。新店对所有人初始无状态（不受 source 基线影响），不进 WXY 的历史 Feed。
+- 高德 key/安全密钥复用 dachitech `data/map-config.json`（用户授权）：本地 `.env.local`，线上 repo secrets `AMAP_KEY` / `AMAP_SECURITY` 注入 workflow；不进 git。会出现在前端 bundle，靠高德域名白名单防滥用。
+- 127.0.0.1 不在白名单（INVALID_USER_DOMAIN），本地用 `npm run test:amap`（高德桩 + Supabase 桩）；线上 gummybun0915.github.io 已用真实高德验证搜索与加店。
+- 未做：海外（高德覆盖差）手动加店；国内地图底图仍是 OpenFreeMap；新加的店无封面图，靠用户记录时上传照片。
