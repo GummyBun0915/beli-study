@@ -61,7 +61,7 @@ try{
   await c.getByRole('button',{name:'添加这家',exact:false}).click();await c.getByRole('heading',{name:'一蘭 渋谷店',exact:true}).waitFor();
   state=await c.evaluate(k=>JSON.parse(localStorage.getItem(k)),stateKey);
   assert.deepEqual([state.places['osm:N3047251663'].source,state.places['osm:N3047251663'].country,state.places['osm:N3047251663'].lng],['osm','JP',139.7009878]);
-  assert.equal(await c.locator('.detail-title-row .eyebrow').innerText(),'日本');
+  assert.equal(await c.locator('.detail-title-row .eyebrow').innerText(),'日本');assert((await c.locator('.detail-title-row').innerText()).includes('餐厅'));
   // Manual entry when nothing is found anywhere.
   await c.goto(base+'#/search');await c.getByPlaceholder('店名、菜系、菜品、地区').fill('路边摊');
   await c.getByRole('button',{name:'都搜不到？手动添加',exact:true}).click();

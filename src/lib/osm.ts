@@ -5,6 +5,8 @@ import type { PlaceRecord } from '../data/restaurants';
 const ENDPOINT = 'https://photon.komoot.io/api/';
 const FOOD_TAGS = ['amenity:restaurant', 'amenity:cafe', 'amenity:fast_food', 'amenity:bar', 'amenity:pub', 'amenity:food_court', 'amenity:ice_cream', 'shop:bakery'];
 
+const KIND_LABEL: Record<string, string> = { restaurant: '餐厅', cafe: '咖啡馆', fast_food: '快餐', bar: '酒吧', pub: '酒馆', food_court: '美食广场', ice_cream: '冰淇淋', bakery: '面包店' };
+
 interface PhotonFeature {
   geometry?: { coordinates?: [number, number] };
   properties?: Record<string, string | number | undefined>;
@@ -19,7 +21,7 @@ function toPlace(feature: PhotonFeature, addedAt: string): PlaceRecord | null {
   const text = (value: unknown) => typeof value === 'string' ? value : '';
   const street = [text(p.street), text(p.housenumber)].filter(Boolean).join(' ');
   return { id: `osm:${type}${osmId}`, source: 'osm', poiId: `${type}${osmId}`, name: p.name.trim(), address: street,
-    city: text(p.city) || text(p.county) || text(p.state), district: text(p.district) || text(p.locality), type: text(p.osm_value),
+    city: text(p.city) || text(p.county) || text(p.state), district: text(p.district) || text(p.locality), type: KIND_LABEL[text(p.osm_value)] ?? text(p.osm_value),
     country: text(p.countrycode).toUpperCase(), lng: located ? lng : null, lat: located ? lat : null, addedAt };
 }
 

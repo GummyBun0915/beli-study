@@ -89,3 +89,10 @@ GitHub connector 已认证为 GummyBun0915，有目标仓库 push/admin 权限�
 - 高德 key/安全密钥复用 dachitech `data/map-config.json`（用户授权）：本地 `.env.local`，线上 repo secrets `AMAP_KEY` / `AMAP_SECURITY` 注入 workflow；不进 git。会出现在前端 bundle，靠高德域名白名单防滥用。
 - 127.0.0.1 不在白名单（INVALID_USER_DOMAIN），本地用 `npm run test:amap`（高德桩 + Supabase 桩）；线上 gummybun0915.github.io 已用真实高德验证搜索与加店。
 - 未做：海外（高德覆盖差）手动加店；国内地图底图仍是 OpenFreeMap；新加的店无封面图，靠用户记录时上传照片。
+
+## 2026-10-23 高德底图 + 海外加店（bed0206 起）
+
+- 地图：当前要显示的店全部在中国大陆时用高德 JS API 底图（定位针用原始 GCJ-02），否则用 OpenFreeMap。`?map=amap|osm` 可强制切换；localhost/127.0.0.1 默认 OSM（不在高德白名单）。实现在 `src/components/MapPane.tsx`（AmapBasemap / LeafletBasemap 共用 pinSpec）。
+- 加店（`src/components/AddPlace.tsx`）：国内走高德；海外地区（日本/新加坡/泰国）走 Photon/OpenStreetMap（`src/lib/osm.ts`，免费免 key、按地区国家代码过滤、界面标注 OSM 版权）；都搜不到可手动填店名/城市/地址（无坐标，不上地图）。PlaceRecord 新增 `source`（amap/osm/manual）和 `country`；海外店导航跳 Google 地图。
+- 没用 Google Places：需要用户绑卡开通，且条款不允许长期保存店名/地址（只能存 Place ID）。
+- 线上已用真实高德底图（深圳 24 个定位针、点击出预览）和真实 Photon（日本一蘭、新加坡 Jumbo Seafood）验证；本地 `npm run test:amap` 覆盖桩测试。
