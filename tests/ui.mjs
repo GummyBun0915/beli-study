@@ -1,0 +1,48 @@
+import { chromium } from 'playwright-core';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const base=process.env.TEST_URL || 'http://127.0.0.1:5173/';
+const executablePath=process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const data=JSON.parse(fs.readFileSync('src/data/restaurants.generated.json','utf8')).restaurants;
+const first=data.find(r=>r.brand.includes('寿司郎'));
+const second=data.find(r=>r.brand.includes('笨萝卜'));
+const multi=data.find(r=>r.images.length>2);
+const browser=await chromium.launch({headless:true,executablePath});
+const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+fs.mkdirSync('qa',{recursive:true});
+const route=async hash=>{await page.goto(`${base}#/${hash}`);};
+const logVisit=async(r,note,rank=false)=>{
+  await route(`restaurant/${r.id}`);
+  await page.getByRole('button',{name:'再去了一次',exact:true}).click();
+  await page.getByRole('button',{name:'I liked it!',exact:true}).click();
+  await page.getByLabel('Notes',{exact:true}).fill(note);
+  await page.getByLabel('分店',{exact:true}).fill('测试到访记录');
+  await page.getByLabel('到访日期').fill('2026-10-20');
+  if(rank){await page.getByRole('button',{name:/下一步/}).click();if(await page.locator('.ranking-pair').count())await page.locator('.ranking-pair button').first().click();}
+  else await page.getByRole('button',{name:'仅保存这次用餐，保留现有排名'}).click();
+  await page.getByRole('button',{name:'Done',exact:true}).click();
+};
+try{
+  await logVisit(first,'第一次测试笔记');
+  await logVisit(first,'第二次测试笔记');
+  assert.equal(await page.locator('.visit-timeline article').count(),2);
+  assert.equal(await page.locator('.detail-score').count(),0);
+  await logVisit(first,'第三次测试：更新排名',true);
+  await logVisit(second,'比较另一家餐厅',true);
+  await page.reload();
+  const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('beli-dachitech:food-state:v2')));
+  assert.equal(state.visits[first.id].length,3);assert.equal(state.visits[second.id].length,1);
+  assert.equal(state.order.length,2);assert.equal(state.order[0],second.id);
+  await route('rank');assert.equal(await page.locator('.rank-item').count(),2);await page.screenshot({path:'qa/rank-mobile.png'});
+  await route(`restaurant/${first.id}`);await page.screenshot({path:'qa/visits-mobile.png',fullPage:true});
+  await page.getByRole('button',{name:'重新排名',exact:true}).click();await page.getByRole('button',{name:'I liked it!',exact:true}).click();await page.getByRole('button',{name:/下一步/}).click();await page.screenshot({path:'qa/ranking-compare-mobile.png'});await page.locator('.ranking-pair button').last().click();await page.getByRole('button',{name:'Done',exact:true}).click();
+  const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('beli-dachitech:food-state:v2')));assert.equal(after.visits[first.id].length,3);
+  await route(`restaurant/${multi.id}`);const gallery=page.locator('.detail-carousel');await gallery.getByRole('button',{name:'查看第 2 张照片'}).click();await page.waitForTimeout(350);assert.equal(await gallery.locator('.carousel-count').innerText(),`2 / ${multi.images.length}`);await gallery.locator('.photo-slide').nth(1).click();await page.keyboard.press('ArrowRight');assert((await page.locator('.viewer-controls').innerText()).includes(`3 / ${multi.images.length}`));await page.keyboard.press('Escape');
+  await route('search');await page.getByRole('searchbox').fill('笨萝卜');await page.locator('.search-results-title').getByText('1 家餐厅').waitFor();assert.equal(await page.locator('.search-row').count(),1);
+  await route('profile');assert.equal(await page.locator('.profile-avatar').innerText(),'W');assert.equal(await page.locator('.profile-name').innerText(),'WXY');await page.locator('.sharing-unavailable, [aria-label="选择身份"]').first().waitFor();await page.screenshot({path:'qa/profile-mobile.png'});
+  await route('lists');assert.equal(await page.locator('.row-tags').filter({hasText:/待定级|星选|星推介/}).count(),0);await page.screenshot({path:'qa/lists-mobile.png'});
+  await page.getByRole('button',{name:'Map',exact:true}).click();await page.locator('.beli-map-pin').first().waitFor();assert.equal(await page.locator('.beli-map-pin').count(),24);await page.locator('.beli-map-pin').first().click({force:true});await page.locator('.map-preview').waitFor();
+  await route('feed');await page.screenshot({path:'qa/feed-mobile.png'});const body=await page.locator('body').innerText();assert(!/星其林|dachitech|大吃特吃|来自.*真实/.test(body));const width=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:innerWidth}));assert(width.scroll<=width.viewport+1);assert.deepEqual(errors,[]);
+  const report={testedAt:new Date().toISOString(),passed:['multiple visits remain separate','rerank does not duplicate visits','one rank per restaurant','comparison ordering and reload persistence','multi-photo carousel and viewer','search','blue W / WXY','no source jargon in product','map selection','mobile width'],errors};fs.writeFileSync('qa/test-report.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
+}finally{await browser.close();}

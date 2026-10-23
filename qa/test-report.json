@@ -1,0 +1,16 @@
+{
+  "testedAt": "2026-10-23T01:47:22.177Z",
+  "passed": [
+    "multiple visits remain separate",
+    "rerank does not duplicate visits",
+    "one rank per restaurant",
+    "comparison ordering and reload persistence",
+    "multi-photo carousel and viewer",
+    "search",
+    "blue W / WXY",
+    "no source jargon in product",
+    "map selection",
+    "mobile width"
+  ],
+  "errors": []
+}

@@ -1,0 +1,156 @@
+[
+  {
+    "file": "references/public/apple-01-feed.png",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/e6/a1/02/e6a10227-1684-05d1-0695-b9cc7044c36a/Track__U0028L_U0029__U00281_U0029.png/1284x2778.png",
+    "page": "Feed",
+    "evidence": "official-store",
+    "sourceDate": "2026-10-22",
+    "downloadedAt": "2026-10-22",
+    "appVersion": "unverified",
+    "dimensions": [
+      1284,
+      2778
+    ],
+    "sha256": "b3fd88efa775ef44fe198e54c74df72e5eea5361df496f3f948c4df8b432ea1c"
+  },
+  {
+    "file": "references/public/apple-02-map.png",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/fc/21/7e/fc217ee4-c921-f2f9-2953-7cd6a7963792/Track__U0028L_U0029__U00283_U0029.png/1284x2778.png",
+    "page": "My Lists map",
+    "evidence": "official-store",
+    "sourceDate": "2026-10-22",
+    "downloadedAt": "2026-10-22",
+    "appVersion": "unverified",
+    "dimensions": [
+      1284,
+      2778
+    ],
+    "sha256": "2ae6c43cb9ad0ca625c6f7ab306c9a3aa85d1b9bc73119cc251a3b0c81577341"
+  },
+  {
+    "file": "references/public/apple-03-activity.png",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/f7/d9/79/f7d97951-0b8c-6dd3-8038-bda5e57d0625/Beli__U0028L_U0029__U00281_U0029.png/1284x2778.png",
+    "page": "Activity",
+    "evidence": "official-store",
+    "sourceDate": "2026-10-22",
+    "downloadedAt": "2026-10-22",
+    "appVersion": "unverified",
+    "dimensions": [
+      1284,
+      2778
+    ],
+    "sha256": "c8f7c5af87c7260259a7e4aa6faac1365819ad6e4b77cecb9d29da750a607e5f"
+  },
+  {
+    "file": "references/public/apple-04-discover.png",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/61/16/72/6116724c-06a6-068b-0c6c-cf4fafec9378/Discover__U0028L_U0029__U00281_U0029.png/1284x2778.png",
+    "page": "Discover",
+    "evidence": "official-store",
+    "sourceDate": "2026-10-22",
+    "downloadedAt": "2026-10-22",
+    "appVersion": "unverified",
+    "dimensions": [
+      1284,
+      2778
+    ],
+    "sha256": "f715080196a8f86266fe8c5e7e6dce53ccb366e48f9cee6a4e7d7fe71bd6a628"
+  },
+  {
+    "file": "references/public/apple-05-list.png",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/00/b5/14/00b514c6-189c-be4d-db63-c6b7fdae7a3b/Beli__U0028L_U0029__U00282_U0029.png/1284x2778.png",
+    "page": "My Lists recs",
+    "evidence": "official-store",
+    "sourceDate": "2026-10-22",
+    "downloadedAt": "2026-10-22",
+    "appVersion": "unverified",
+    "dimensions": [
+      1284,
+      2778
+    ],
+    "sha256": "9ce1b8641208df71675e0d7f007b13c3f2e32102afccdad22394326131f72848"
+  },
+  {
+    "file": "references/public/apple-06-profile.png",
+    "url": "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/e3/de/a8/e3dea878-b2df-f017-a804-6fbe0b09cfae/Beli__U0028L_U0029__U00283_U0029.png/1284x2778.png",
+    "page": "Profile",
+    "evidence": "official-store",
+    "sourceDate": "2026-10-22",
+    "downloadedAt": "2026-10-22",
+    "appVersion": "unverified",
+    "dimensions": [
+      1284,
+      2778
+    ],
+    "sha256": "c797e56cac1980ae5d4369b019fb1b911202b7269e7f5b20b772e34c0f959737"
+  },
+  {
+    "file": "references/public/pratt-2026-rating.png",
+    "url": "https://ixd.prattsi.org/wp-content/uploads/2026/09/image-1-1.png",
+    "page": "Sentiment and comparison",
+    "evidence": "real-use-annotated",
+    "sourceDate": "2026-09-09",
+    "downloadedAt": "2026-10-22",
+    "appVersion": "unverified",
+    "dimensions": [
+      820,
+      312
+    ],
+    "sha256": "b41a34d762a8cd95d319d31ba4e9c14d70eb7ab11a1f0e4b1af57f81f9cb0f84"
+  },
+  {
+    "file": "references/public/pratt-2026-save.png",
+    "url": "https://ixd.prattsi.org/wp-content/uploads/2026/09/image-2-1.png",
+    "page": "Restaurant and save",
+    "evidence": "real-use-annotated",
+    "sourceDate": "2026-09-09",
+    "downloadedAt": "2026-10-22",
+    "appVersion": "unverified",
+    "dimensions": [
+      820,
+      312
+    ],
+    "sha256": "3e20cda63a8b4ffba4f7141fff5006555e9edff3ffdab97f067d7a493e4e03ba"
+  },
+  {
+    "file": "references/public/pratt-2026-featured.png",
+    "url": "https://ixd.prattsi.org/wp-content/uploads/2026/09/image-3-1.png",
+    "page": "Featured lists",
+    "evidence": "real-use-annotated",
+    "sourceDate": "2026-09-09",
+    "downloadedAt": "2026-10-22",
+    "appVersion": "unverified",
+    "dimensions": [
+      820,
+      312
+    ],
+    "sha256": "6ca8314376ad030a20f51982229786a875a4705fa3ae94bcd2c84d20714bb692"
+  },
+  {
+    "file": "references/public/substack-2024-list.png",
+    "url": "https://substack-post-media.s3.amazonaws.com/public/images/63e4f5ed-beeb-4a33-8d72-1bab3cbbfcc9_1179x2556.png",
+    "page": "Been list (not restaurant detail)",
+    "evidence": "historical-real-use",
+    "sourceDate": "2024-07-01",
+    "downloadedAt": "2026-10-22",
+    "appVersion": "unverified",
+    "dimensions": [
+      1179,
+      2556
+    ],
+    "sha256": "ae9960ab4281aed1d692808e86ede5ee730dc20a900e1791e44c472882c5e2ee"
+  },
+  {
+    "file": "references/public/lazyweb-2026-onboarding.png",
+    "url": "https://zlfyzdmohcskkucuunmk.supabase.co/storage/v1/object/public/screenshots/uploaded_beli/main_tabs/compare/2026-05-27/1779936938602_00_Beli-20260528-025537-01.png",
+    "page": "Onboarding",
+    "evidence": "third-party-capture",
+    "sourceDate": "2026-05-27",
+    "downloadedAt": "2026-10-22",
+    "appVersion": "unverified",
+    "dimensions": [
+      1206,
+      2622
+    ],
+    "sha256": "47e160ca1c075ee139cea75b696955588d94a49a7b1700aef12c37952ea9b296"
+  }
+]

@@ -1,0 +1,127 @@
+.beli-map {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  overflow: hidden;
+  background: #edf1ed;
+  isolation: isolate;
+}
+
+.beli-map__canvas { position: absolute; inset: 0; }
+.beli-map .leaflet-container { background: #edf1ed; font: inherit; }
+.beli-map .leaflet-control-attribution {
+  max-width: 70%;
+  color: #566b6d;
+  font-size: 9px;
+  line-height: 1.35;
+  background: rgba(255,255,255,.86);
+}
+.beli-map .leaflet-control-attribution a { color: #294d52; }
+.beli-map .leaflet-control-zoom { border: 0; box-shadow: 0 2px 12px rgba(24,49,51,.16); }
+.beli-map .leaflet-control-zoom a { color: #20464d; border-color: #e5e9e8; }
+
+.beli-map-pin { background: transparent; border: 0; display: flex; align-items: center; white-space: nowrap; }
+.beli-map-pin__bubble {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  background: #49a281;
+  color: #fff;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 5px rgba(19,55,48,.26);
+  transition: transform .16s ease, background .16s ease;
+}
+.beli-map-pin__bubble svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.beli-map-pin__score {
+  margin-left: -2px;
+  padding: 2px 5px 2px 4px;
+  min-width: 26px;
+  color: #21444a;
+  background: #fff;
+  border: 1px solid #e6ece9;
+  border-radius: 0 12px 12px 0;
+  box-shadow: 1px 1px 5px rgba(19,55,48,.15);
+  font: 700 11px/17px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-align: center;
+}
+.beli-map-pin.is-active .beli-map-pin__bubble,
+.beli-map-pin:focus-visible .beli-map-pin__bubble { background: #234d54; transform: scale(1.18); }
+.beli-map-pin.is-active .beli-map-pin__score { border-color: #234d54; }
+
+.beli-map__tools { position: absolute; z-index: 600; top: 12px; right: 12px; }
+.beli-map__reset {
+  min-height: 34px;
+  padding: 0 12px;
+  color: #23464e;
+  background: #fff;
+  border: 1px solid #c7d3d1;
+  border-radius: 18px;
+  box-shadow: 0 2px 12px rgba(23,49,52,.12);
+  font: 700 12px/1 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  cursor: pointer;
+}
+.beli-map__reset:hover { background: #f2f7f5; }
+.beli-map__reset:focus-visible { outline: 3px solid #7ab8ab; outline-offset: 2px; }
+.beli-map__unlocated {
+  position: absolute;
+  z-index: 500;
+  left: 12px;
+  bottom: 24px;
+  max-width: min(260px, calc(100% - 100px));
+  padding: 7px 10px;
+  color: #38575a;
+  background: rgba(255,255,255,.94);
+  border: 1px solid #dbe6e3;
+  border-radius: 6px;
+  box-shadow: 0 1px 8px rgba(23,49,52,.1);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.beli-map__empty {
+  position: absolute;
+  z-index: 550;
+  top: 50%;
+  left: 50%;
+  width: min(250px, 80%);
+  padding: 16px;
+  transform: translate(-50%,-50%);
+  color: #25464a;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 5px 24px rgba(21,44,46,.13);
+  text-align: center;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.beli-map__empty span { font-size: 12px; font-weight: 400; }
+.beli-map__tile-warning {
+  position: absolute;
+  z-index: 600;
+  left: 50%;
+  top: 54px;
+  width: min(340px, calc(100% - 24px));
+  padding: 10px 12px;
+  transform: translateX(-50%);
+  color: #23464e;
+  background: #fff;
+  border: 1px solid #d8e4e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(21,44,46,.16);
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.beli-map__tile-warning button { margin-left: 8px; padding: 0; border: 0; background: none; color: #14775d; font-weight: 700; cursor: pointer; }
+
+@media (max-width: 680px) {
+  .beli-map { min-height: 55dvh; }
+  .beli-map__unlocated { bottom: 32px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beli-map-pin__bubble { transition: none; }
+}
