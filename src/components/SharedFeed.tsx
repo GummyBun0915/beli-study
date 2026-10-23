@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, CirclePlus } from 'lucide-react';
 import { formattedVisitDate, restaurants, type Restaurant } from '../data/restaurants';
 import type { FoodStateController } from '../state/useFoodState';
 import type { SharingController } from '../state/useSharing';
@@ -7,13 +7,13 @@ import { sharedFeed } from '../state/sharedFeed';
 import { LocalPhotos } from './VisitTimeline';
 import { PhotoCarousel, PhotoViewer } from './PhotoGallery';
 
-export function SharedFeed({ food, sharing, onOpen }: { food: FoodStateController; sharing: SharingController; onOpen: (restaurant: Restaurant) => void }) {
+export function SharedFeed({ food, sharing, onOpen, onRecord }: { food: FoodStateController; sharing: SharingController; onOpen: (restaurant: Restaurant) => void; onRecord: () => void }) {
   const [limit, setLimit] = useState(24);
   const [gallery, setGallery] = useState<{ restaurant: Restaurant; index: number } | null>(null);
   const posts = useMemo(() => sharedFeed(sharing.members, sharing.states, sharing.userId, food.snapshot, restaurants), [sharing.members, sharing.states, sharing.userId, food.snapshot]);
   return <section className="feed-section feed-diary" id="your-feed" aria-label="两人的用餐动态">
-    <div className="section-head"><h2>OUR FEED</h2></div>
-    {!posts.length && <p className="feed-empty">还没有用餐记录，记录下一餐吧。</p>}
+    <div className="section-head"><h2>OUR FEED</h2><button onClick={onRecord}><CirclePlus size={13} /> 记录一餐</button></div>
+    {!posts.length && <div className="feed-empty"><p>还没有用餐记录。</p><button onClick={onRecord}>搜索餐厅，记录这一餐</button></div>}
     {posts.slice(0, limit).map(post => {
       const { author, restaurant: r, visit } = post;
       const entry=visit||post.log;

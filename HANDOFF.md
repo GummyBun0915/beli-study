@@ -75,3 +75,9 @@ VITE_BASE_PATH=/beli-study/ npm run preview -- --port 4178
 真实云端检查脚本：`tests/cloud-service.mjs`、`tests/cloud-ui.mjs`，密码仅从调用进程的 `CLOUD_TEST_PASSWORD` 环境变量读取。前者可能创建尚不存在的二人空间，对已有快照仅原样保存；后者要求初始 67/0 Been，不应在用户已新增记录后盲跑该固定计数断言。不要为了测试去重置真实记录。
 
 GitHub connector 已认证为 GummyBun0915，有目标仓库 push/admin 权限。本机 gh 同时有 0915 / 999，默认之前为 999，不能默认用错账号；无需邀请错误账号绕过登录。
+
+## 2026-10-23 Claude 接力（第二轮）
+
+- 8e06efe：发布 Codex 未提交的两人共享 Feed；修测试夹具以兼容 realtime-js v2 数组帧（App 本身无问题），ui 测试在计数排名前等待列表渲染。
+- 本轮：Feed「OUR FEED」右侧和空状态加「记录一餐」入口（跳 Search）；详情页「去过 / 想去」改为二选一状态组，「再去了一次 / 记录用餐」降为次级整行按钮；已去过但未排名时显示「还没排名」引导，走 rerank 模式（不新增到访）。
+- 「再去了一次」「一起想去」「两人 Feed」均为用户要求的 CUSTOM-EXTENSION，不是 Beli 原版组件；顶部 RESTAURANT 标题与原版差异仍 UNVERIFIED（缺登录后原版截图）。
