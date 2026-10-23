@@ -22,7 +22,7 @@ export function AddPlace({ query, searchCity, catalog, onAdd, onOpen }: { query:
   }, [catalog, searchCity]);
   const searchKey = `${searchCity}|${keyword}`;
   const [found, setFound] = useState<{ key: string; provider: Provider; loading: boolean; results: PlaceRecord[]; error: string } | null>(null);
-  const [manual, setManual] = useState<{ name: string; city: string; address: string } | null>(null);
+  const [manual, setManual] = useState<{ name: string; city: string; address: string; country: string } | null>(null);
 
   const run = (provider: Provider) => {
     if (!keyword) return;
@@ -36,7 +36,7 @@ export function AddPlace({ query, searchCity, catalog, onAdd, onOpen }: { query:
   const addManual = () => {
     if (!manual?.name.trim() || !manual.city.trim()) return;
     onAdd({ id: `manual:${crypto.randomUUID().replaceAll('-', '').slice(0, 24)}`, source: 'manual', poiId: '', name: manual.name.trim().slice(0, 120),
-      address: manual.address.trim().slice(0, 300), city: manual.city.trim().slice(0, 60), district: '', type: '', country: '', lng: null, lat: null, addedAt: new Date().toISOString() });
+      address: manual.address.trim().slice(0, 300), city: manual.city.trim().slice(0, 60), district: '', type: '', country: manual.country, lng: null, lat: null, addedAt: new Date().toISOString() });
   };
 
   if (!keyword) return null;
@@ -57,10 +57,11 @@ export function AddPlace({ query, searchCity, catalog, onAdd, onOpen }: { query:
       </>}
     <div className="add-place-links">
       {alternate && <button onClick={() => run(alternate)}>{alternate === 'osm' ? '海外的店？改用 OpenStreetMap 搜' : '国内的店？改用高德搜'}</button>}
-      {!manual && <button onClick={() => setManual({ name: keyword, city: searchCity === 'all' ? '' : regionName(searchCity), address: '' })}>都搜不到？手动添加</button>}
+      {!manual && <button onClick={() => setManual({ name: keyword, city: searchCity === 'all' ? '' : regionName(searchCity), address: '', country: regionCountry(searchCity) || (searchCity === 'all' ? '' : 'CN') })}>都搜不到？手动添加</button>}
     </div>
     {manual && <form className="add-place-form" onSubmit={event => { event.preventDefault(); addManual(); }}>
       <label>店名<input value={manual.name} maxLength={120} onChange={e => setManual({ ...manual, name: e.target.value })} required /></label>
+      <label>国家 / 地区<select aria-label="国家 / 地区" value={manual.country} onChange={e => setManual({ ...manual, country: e.target.value })}><option value="">其他 / 未指定</option><option value="CN">中国大陆</option><option value="JP">日本</option><option value="SG">新加坡</option><option value="TH">泰国</option></select></label>
       <label>城市<input value={manual.city} maxLength={60} placeholder="例如：东京、曼谷" onChange={e => setManual({ ...manual, city: e.target.value })} required /></label>
       <label>地址 <small>选填</small><input value={manual.address} maxLength={300} onChange={e => setManual({ ...manual, address: e.target.value })} /></label>
       <p>手动添加的店没有坐标，不会出现在地图上。</p>

@@ -1,6 +1,6 @@
 {
-  "testedAt": "2026-10-23T05:01:12.915Z",
-  "base": "http://127.0.0.1:4178/beli-study/",
+  "testedAt": "2026-10-23T09:36:14.754Z",
+  "base": "http://127.0.0.1:5178/",
   "passed": [
     "all unauthenticated routes show login only",
     "no guest personal feed or navigation",

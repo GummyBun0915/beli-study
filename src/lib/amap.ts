@@ -12,14 +12,23 @@ let loading: Promise<any> | null = null;
 export function loadAmap(): Promise<any> {
   if (!key) return Promise.reject(new Error('高德搜索尚未配置'));
   if (window.AMap?.PlaceSearch) return Promise.resolve(window.AMap);
-  loading ??= new Promise((resolve, reject) => {
-    if (security) window._AMapSecurityConfig = { securityJsCode: security };
-    const script = document.createElement('script');
-    script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(key)}&plugin=AMap.PlaceSearch`;
-    script.onload = () => window.AMap?.PlaceSearch ? resolve(window.AMap) : reject(new Error('高德搜索组件未载入'));
-    script.onerror = () => { loading = null; script.remove(); reject(new Error('无法连接高德，请稍后重试')); };
-    document.head.append(script);
-  });
+  if (!loading) {
+    const attempt = new Promise<any>((resolve, reject) => {
+      if (security) window._AMapSecurityConfig = { securityJsCode: security };
+      const script = document.createElement('script');
+      const fail = (message: string) => { window.clearTimeout(timer); script.remove(); reject(new Error(message)); };
+      const timer = window.setTimeout(() => fail('高德连接超时，请重试'), 15000);
+      script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(key)}&plugin=AMap.PlaceSearch`;
+      script.onload = () => {
+        window.clearTimeout(timer);
+        if (window.AMap?.PlaceSearch) resolve(window.AMap);
+        else fail('高德搜索组件未载入，请重试');
+      };
+      script.onerror = () => fail('无法连接高德，请稍后重试');
+      document.head.append(script);
+    });
+    loading = attempt.catch(error => { loading = null; throw error; });
+  }
   return loading;
 }
 

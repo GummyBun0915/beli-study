@@ -4,7 +4,10 @@
 
 ## 当前结论
 
-- 首页现为共同用餐 Feed，混排 WXY/LHJ 的独立 VisitEntry，并标明作者。原历史只归 source 基线拥有者；个人评分、状态与榜单未合并。实现及本地真实账号只读验收通过；线上发布以 main 的 Actions 结果为准。
+- 已审查 Claude 从 8e06efe 到 c43cf33 的代码增量：记录入口、详情状态/重新排名、高德 POI、共享餐厅目录、国内底图、海外 OSM 与手动加店。未发现将对方评分/排名复制进自己的实现；新店只复制餐厅元数据，个人状态由本人操作生成。
+- 审查修补：高德 SDK 初始化失败会清除失败缓存，并有 15 秒连接超时；手动加店可明确选国家/地区，避免海外城市无法被地区筛选找到。两项均有独立服务夹具回归覆盖。历史已添加但未填国家的手动店不会被自动猜测/改写。
+
+- 首页现为共同用餐 Feed，混排 WXY/LHJ 的独立 VisitEntry，并标明作者。原历史只归 source 基线拥有者；个人评分、状态与榜单未合并。正式线上 WXY/LHJ 两账号只读验收通过；双方可见已有作者的动态，查看 Feed 不修改各自快照、计数或榜单。
 
 - 仓库：<https://github.com/GummyBun0915/beli-study>，分支 main。
 - 网站：<https://gummybun0915.github.io/beli-study/>，GitHub Pages 自动部署。
@@ -72,7 +75,7 @@ VITE_BASE_PATH=/beli-study/ npm run preview -- --port 4178
 
 生产连接来自已提交 `.env.production`，只含公开 URL / publishable key；`.env.local` 仍忽略。workflow 不再注入可能为空的 Actions Variables。不要使用 secret/service_role key。
 
-真实云端检查脚本：`tests/cloud-service.mjs`、`tests/cloud-ui.mjs`，密码仅从调用进程的 `CLOUD_TEST_PASSWORD` 环境变量读取。前者可能创建尚不存在的二人空间，对已有快照仅原样保存；后者要求初始 67/0 Been，不应在用户已新增记录后盲跑该固定计数断言。不要为了测试去重置真实记录。
+真实云端检查脚本：`tests/cloud-service.mjs`、`tests/cloud-ui.mjs`，密码仅从调用进程的 `CLOUD_TEST_PASSWORD` 环境变量读取。前者可能创建尚不存在的二人空间，对已有快照仅原样保存；后者会操作共同想去清单；本轮使用纯只读的 shared-feed-live.mjs，避免改动既有记录。不要为了测试去重置真实记录。
 
 GitHub connector 已认证为 GummyBun0915，有目标仓库 push/admin 权限。本机 gh 同时有 0915 / 999，默认之前为 999，不能默认用错账号；无需邀请错误账号绕过登录。
 
@@ -88,7 +91,7 @@ GitHub connector 已认证为 GummyBun0915，有目标仓库 push/admin 权限�
 - 加的店以 `amap:<POI ID>` 存进**添加者自己的** snapshot `places`（`src/state/useFoodState.ts`），随 beli_states 同步，**未改数据库结构**。App 的 catalog = 静态 75 家 + 自己的 places + 对方 snapshot 里的 places（`mergePlaces`）。对方的店只在自己标记/记录/一起想去时复制进自己的 places，排名不复制。新店对所有人初始无状态（不受 source 基线影响），不进 WXY 的历史 Feed。
 - 高德 key/安全密钥复用 dachitech `data/map-config.json`（用户授权）：本地 `.env.local`，线上 repo secrets `AMAP_KEY` / `AMAP_SECURITY` 注入 workflow；不进 git。会出现在前端 bundle，靠高德域名白名单防滥用。
 - 127.0.0.1 不在白名单（INVALID_USER_DOMAIN），本地用 `npm run test:amap`（高德桩 + Supabase 桩）；线上 gummybun0915.github.io 已用真实高德验证搜索与加店。
-- 未做：海外（高德覆盖差）手动加店；国内地图底图仍是 OpenFreeMap；新加的店无封面图，靠用户记录时上传照片。
+- 本提交当时未实现的海外/手动加店及国内高德底图，已由后续 bed0206 实现（见下节）。新加的店无封面图，靠用户记录时上传照片。
 
 ## 2026-10-23 高德底图 + 海外加店（bed0206 起）
 

@@ -20,9 +20,14 @@ const open=async(identity,snapshots)=>{
 try{
   // WXY finds a restaurant that is not in the catalogue and adds it.
   const a=await open('WXY',{LHJ:empty('empty')});
+  let sdkAttempts=0;
+  await a.route('https://webapi.amap.com/**',route=>route.fulfill({contentType:'application/javascript',body:++sdkAttempts===1?'/* SDK failed to initialise */':stub}));
   await a.goto(base+'#/search');await a.getByPlaceholder('店名、菜系、菜品、地区').fill('测试夹具');
   await a.getByText('没找到？在高德搜索',{exact:false}).click();
+  await a.getByText('高德搜索组件未载入，请重试',{exact:false}).waitFor();
+  await a.getByRole('button',{name:'重试',exact:true}).click();
   await a.locator('.place-row').filter({hasText:poi.name}).waitFor();
+  assert.equal(sdkAttempts,2,'failed SDK load must be retryable');
   const call=(await a.evaluate(()=>window.__amapCalls))[0];assert.equal(call.keyword,'测试夹具');assert.equal(call.opts.type,'餐饮服务');assert.equal(call.opts.citylimit,false);
   await a.getByRole('button',{name:'添加这家',exact:false}).click();
   await a.getByRole('heading',{name:poi.name,exact:true}).waitFor();
@@ -65,10 +70,11 @@ try{
   // Manual entry when nothing is found anywhere.
   await c.goto(base+'#/search');await c.getByPlaceholder('店名、菜系、菜品、地区').fill('路边摊');
   await c.getByRole('button',{name:'都搜不到？手动添加',exact:true}).click();
-  await c.getByLabel('城市',{exact:false}).fill('曼谷');await c.getByLabel('地址',{exact:false}).fill('Soi 38');
+  await c.getByLabel('国家 / 地区',{exact:true}).selectOption('TH');await c.getByLabel('城市',{exact:false}).fill('曼谷');await c.getByLabel('地址',{exact:false}).fill('Soi 38');
   await c.getByRole('button',{name:'添加',exact:true}).click();await c.getByRole('heading',{name:'路边摊',exact:true}).waitFor();
   state=await c.evaluate(k=>JSON.parse(localStorage.getItem(k)),stateKey);
-  const manual=Object.values(state.places).find(place=>place.source==='manual');assert.equal(manual.name,'路边摊');assert.equal(manual.city,'曼谷');assert.equal(manual.lng,null);
+  const manual=Object.values(state.places).find(place=>place.source==='manual');assert.equal(manual.name,'路边摊');assert.equal(manual.city,'曼谷');assert.equal(manual.lng,null);assert.equal(manual.country,'TH');assert.equal(await c.locator('.detail-title-row .eyebrow').innerText(),'泰国');
+  await c.goto(base+'#/search');await c.getByPlaceholder('店名、菜系、菜品、地区').fill('路边摊');await c.locator('.city-scroll button',{hasText:'泰国'}).click();await c.locator('.search-row').filter({hasText:'路边摊'}).waitFor();
   await c.close();
 
   // Mainland-only map views use the AMap basemap with raw GCJ-02 coordinates (forced on localhost via ?map=amap).
@@ -83,6 +89,6 @@ try{
   await d.goto(base+'#/lists');await d.getByRole('button',{name:'Map',exact:true}).click();await d.locator('.beli-map[data-basemap="osm"]').waitFor();
   await d.close();
   assert.deepEqual(errors,[]);
-  const report={testedAt:new Date().toISOString(),base,fixture:true,passed:['AMap search runs only on demand, restaurant category, nationwide when no city','added place opens its detail page with no status','place and status persist in own snapshot across reload','added place appears in local search and is marked as added','partner sees place in shared feed without it being copied','acting on partner place copies the place but not the ranking','overseas OpenStreetMap search filtered to the region country, credited, mapped to JP region','manual add without coordinates','AMap basemap with GCJ-02 pins and explicit center; localhost defaults to OSM'],errors};
+  const report={testedAt:new Date().toISOString(),base,fixture:true,passed:['AMap search runs only on demand, restaurant category, nationwide when no city','added place opens its detail page with no status','place and status persist in own snapshot across reload','added place appears in local search and is marked as added','partner sees place in shared feed without it being copied','acting on partner place copies the place but not the ranking','overseas OpenStreetMap search filtered to the region country, credited, mapped to JP region','manual add without coordinates, explicit country retained and region filter finds it','AMap SDK initialization failure recovers on retry','AMap basemap with GCJ-02 pins and explicit center; localhost defaults to OSM'],errors};
   fs.writeFileSync('qa/amap-place-report.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
 }finally{await browser.close();}

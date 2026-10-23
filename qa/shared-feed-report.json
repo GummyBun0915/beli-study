@@ -1,6 +1,6 @@
 {
-  "testedAt": "2026-10-23T05:01:18.823Z",
-  "base": "http://127.0.0.1:4178/beli-study/",
+  "testedAt": "2026-10-23T09:35:57.056Z",
+  "base": "http://127.0.0.1:5178/",
   "fixture": true,
   "passed": [
     "both authors visible from either account",
