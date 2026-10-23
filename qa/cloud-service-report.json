@@ -1,0 +1,16 @@
+{
+  "testedAt": "2026-10-23T02:25:57.355Z",
+  "passed": [
+    "WXY real password login",
+    "LHJ real password login",
+    "two members in one room, W/L avatars",
+    "own snapshot persistence, existing records preserved, stale revision rejected",
+    "anonymous read denied, cross-user update/insert denied, non-member RPC denied",
+    "shared wishlist visible to partner, real Realtime event received",
+    "private photo upload, member download, anonymous denial, partner cannot overwrite/delete owner photo"
+  ],
+  "limitations": [
+    "Third authenticated non-member account not created; membership denial exercised against a different room ID.",
+    "Snapshots keep existing contents; no fabricated visits or scores added."
+  ]
+}

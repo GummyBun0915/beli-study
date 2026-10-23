@@ -27,7 +27,7 @@ npm run preview
 
 - 从只读 `dachitech` 公开投影复制 75 家餐厅与 172 个被引用图片资产，餐厅和照片数据保留原样。36 家有坐标，缺位置的店继续显示在列表中。
 - 新记录、排名和状态默认保存在当前浏览器。新增照片保存在 IndexedDB。
-- 已上线：<https://gummybun0915.github.io/beli-study/>（GitHub Pages，push main 自动部署）。前端已接入 Supabase（beli-private），WXY / LHJ 账号可在 Profile → Private space 用密码登录；**两账号实际登录与跨设备共享待用户亲测**，清单见 [HANDOFF](HANDOFF.md)。
+- 已上线：<https://gummybun0915.github.io/beli-study/>（GitHub Pages，push main 自动部署）。前端已接入 Supabase（beli-private），WXY / LHJ 账号可在 Profile → Private space 用密码登录；**两账号真实登录、独立浏览器共享、权限与账号切换已通过验证**，报告和剩余边界见 [HANDOFF](HANDOFF.md)。
 - 2026 商店图与 2026-09 实际操作分析用于界面研究；详情页和部分状态没有同一 build 的原始实屏，尚不能声称完整像素级一致。
 - 头像偏好：WXY、蓝底白色 W。产品界面不展示数据工程来源或上游评级体系。
 

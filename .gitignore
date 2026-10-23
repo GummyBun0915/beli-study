@@ -9,3 +9,7 @@ dist/
 references/public/
 qa/*debug*
 *.tsbuildinfo
+
+# Account-session screenshots stay local; never publish personal cloud records.
+qa/sharing-*.png
+qa/supabase-url-config.png

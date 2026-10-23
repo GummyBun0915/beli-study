@@ -1,6 +1,6 @@
 # 总规格 / 当前状态
 
-更新：2026-10-22。新目录独立开发；上游只读。产品以真实餐厅数据支撑可运行体验，优先复刻已核实的 Beli 信息架构、交互序列和视觉层次。
+更新：2026-10-23。新目录独立开发；上游只读。产品以真实餐厅数据支撑可运行体验，优先复刻已核实的 Beli 信息架构、交互序列和视觉层次。
 
 ## 证据与架构决策
 
@@ -19,6 +19,6 @@ Feed、餐厅搜索、Been/Want to Try、城市/菜系/价格筛选、地图/列
 
 ## 仍需外部条件
 
-- Supabase Free 项目 beli-private 已接入前端（.env.production 提交公开 URL + publishable key），公开注册关闭、匿名访问表被拒已核实；两账号登录/RLS/Storage/Realtime 实测待用户完成。
+- Supabase Free 项目 beli-private 已接入前端（.env.production 提交公开 URL + publishable key），公开注册关闭、匿名访问表被拒已核实；WXY/LHJ 已加入同一空间；真实登录、RLS、私有 Storage、Realtime 和浏览器账号隔离验证通过。Site URL 已配置。
 - 同一 Beli build 的完整登录后原始截图/录屏，用于详情、交互状态和动画逐项验收。
 - GitHub 仓库 GummyBun0915/beli-study 已推送完整源码，Pages（Actions 构建）已上线：<https://gummybun0915.github.io/beli-study/>（GitHub Pages，push main 自动部署）。
