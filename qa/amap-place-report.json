@@ -1,0 +1,14 @@
+{
+  "testedAt": "2026-10-23T04:53:24.448Z",
+  "base": "http://127.0.0.1:4178/beli-study/",
+  "fixture": true,
+  "passed": [
+    "AMap search runs only on demand, restaurant category, nationwide when no city",
+    "added place opens its detail page with no status",
+    "place and status persist in own snapshot across reload",
+    "added place appears in local search and is marked as added",
+    "partner sees place in shared feed without it being copied",
+    "acting on partner place copies the place but not the ranking"
+  ],
+  "errors": []
+}

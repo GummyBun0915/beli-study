@@ -13,7 +13,8 @@
     "test:ui": "node tests/ui.mjs",
     "data:verify": "node scripts/verify-import.mjs",
     "test:auth": "node tests/auth-gate.mjs",
-    "test:feed": "node tests/shared-feed.mjs"
+    "test:feed": "node tests/shared-feed.mjs",
+    "test:amap": "node tests/amap-place.mjs"
   },
   "dependencies": {
     "@maplibre/maplibre-gl-leaflet": "^0.1.4",

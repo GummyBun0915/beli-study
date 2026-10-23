@@ -159,7 +159,24 @@ export interface Restaurant extends PublishedRestaurant {
   searchText: string;
   navigationUrl: string;
   navigationProvider: '高德地图' | 'Google 地图';
+  /** Present for restaurants a member added from an AMap POI search. */
+  place?: PlaceRecord;
 }
+
+/** A restaurant added from AMap POI search; stored inside the adder's synced snapshot. */
+export interface PlaceRecord {
+  id: string;
+  poiId: string;
+  name: string;
+  address: string;
+  city: string;
+  district: string;
+  type: string;
+  lng: number | null;
+  lat: number | null;
+  addedAt: string;
+}
+export const isPlaceId = (id: string): boolean => /^amap:[A-Za-z0-9]{1,40}$/.test(id);
 
 /** Published image paths omit the site root. */
 export const imageUrl = (relativePath: string): string => /^(blob:|data:|https?:)/.test(relativePath) ? relativePath : `${import.meta.env.BASE_URL}${relativePath}`;
@@ -192,6 +209,28 @@ function normalize(record: PublishedRestaurant): Restaurant {
 }
 
 export const restaurants: Restaurant[] = data.restaurants.map(normalize);
+
+/** AMap POIs carry GCJ-02 coordinates; they start as no-status for everyone. */
+export function placeToRestaurant(place: PlaceRecord): Restaurant {
+  const region = regions.find(r => place.city.startsWith(r.name) || r.name.startsWith(place.city.replace(/市$/, '')));
+  const kind = place.type.split(';').filter(Boolean).at(-1) || '';
+  return { ...normalize({
+    id: place.id, slug: place.id, regionSlug: region?.slug ?? (place.city.replace(/市$/, '') || '其他'), actualCity: place.city.replace(/市$/, ''),
+    brand: place.name, branch: null, category: kind || null, cuisineTags: kind ? [kind] : [], reviewText: '', dishes: [],
+    score10: null, scoreScope: 'none', recommendationLevel: 'daiChi', visitedAt: null, visitedAtPrecision: null, inRecent: false,
+    multiShop: false, amapQuery: encodeURIComponent(`${place.name} ${place.address}`.trim()), lng: place.lng, lat: place.lat,
+    coordSystem: place.lng === null ? null : 'GCJ02', poiConfidence: 'amap', closed: false, avgPrice: null, branches: [],
+    address: [place.district, place.address].filter(Boolean).join(' '), contentUpdatedAt: place.addedAt, images: [], coverImage: null,
+  }), status: 'want', isVisited: false, isWantToTry: false, place };
+}
+
+/** `base` plus any places it does not already contain. */
+export function mergePlaces(base: Restaurant[], places: Iterable<PlaceRecord>): Restaurant[] {
+  const ids = new Set(base.map(r => r.id));
+  const added: Restaurant[] = [];
+  for (const place of places) if (!ids.has(place.id)) { ids.add(place.id); added.push(placeToRestaurant(place)); }
+  return added.length ? [...base, ...added] : base;
+}
 export const restaurantById = new Map(restaurants.map((restaurant) => [restaurant.id, restaurant]));
 export const regionName = (slug: string): string => regions.find((region) => region.slug === slug)?.name ?? slug;
 

@@ -25,6 +25,9 @@ jobs:
       - run: npm run build
         env:
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          # AMap JS key/security code ship in the bundle; kept out of git like dachitech.
+          VITE_AMAP_KEY: ${{ secrets.AMAP_KEY }}
+          VITE_AMAP_SECURITY: ${{ secrets.AMAP_SECURITY }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
