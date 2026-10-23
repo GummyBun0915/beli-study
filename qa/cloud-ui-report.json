@@ -1,6 +1,6 @@
 {
-  "testedAt": "2026-10-23T02:31:14.356Z",
-  "base": "http://127.0.0.1:4178/beli-study/",
+  "testedAt": "2026-10-23T02:34:44.750Z",
+  "base": "https://gummybun0915.github.io/beli-study/",
   "passed": [
     "real WXY/LHJ browser login",
     "one shared room",

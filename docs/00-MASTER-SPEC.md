@@ -17,7 +17,7 @@
 
 Feed、餐厅搜索、Been/Want to Try、城市/菜系/价格筛选、地图/列表、定位选点预览、详情、多图轮播与灯箱、三种感受、可选笔记/标签/菜品/日期/分店/照片、比较插入排名、撤销、重复用餐时间线、WXY 蓝底 W 资料页。Recs 是本地按用户喜欢菜系筛选的近似推荐；Guides 是已有餐厅的地区探索，不伪造预订时段。
 
-## 仍需外部条件
+## 发布状态与剩余条件
 
 - Supabase Free 项目 beli-private 已接入前端（.env.production 提交公开 URL + publishable key），公开注册关闭、匿名访问表被拒已核实；WXY/LHJ 已加入同一空间；真实登录、RLS、私有 Storage、Realtime 和浏览器账号隔离验证通过。Site URL 已配置。
 - 同一 Beli build 的完整登录后原始截图/录屏，用于详情、交互状态和动画逐项验收。

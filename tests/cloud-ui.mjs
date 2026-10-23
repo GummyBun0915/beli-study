@@ -44,7 +44,7 @@ try{
   await b.locator('.sharing-title').getByText('已同步',{exact:true}).waitFor();
   assert.equal(await b.locator('.profile-avatar').innerText(),'L');
   assert.equal((await b.locator('.profile-metrics strong').allTextContents())[0],'0');
-  await a.screenshot({path:'qa/sharing-wxy-mobile.png',fullPage:true});await b.screenshot({path:'qa/sharing-lhj-mobile.png',fullPage:true});
+  await a.screenshot({path:'qa/sharing-wxy-mobile.png',fullPage:false});await b.screenshot({path:'qa/sharing-lhj-mobile.png',fullPage:false});
   assert.deepEqual(errors,[]);
   const report={testedAt:new Date().toISOString(),base,passed:['real WXY/LHJ browser login','one shared room','W/L profile identity','WXY original 67 Been, LHJ empty','wishlist add/remove arrives without refresh','same-browser account switch isolated','session and records retained after reload'],errors};
   fs.writeFileSync('qa/cloud-ui-report.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));

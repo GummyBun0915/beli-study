@@ -6,7 +6,7 @@
 
 - 仓库：<https://github.com/GummyBun0915/beli-study>，分支 main。
 - 网站：<https://gummybun0915.github.io/beli-study/>，GitHub Pages 自动部署。
-- Claude 的 4c42489 / addee98 已完成首次发布；本轮 Codex 已完成真实两账号、共享数据库、实时消息、照片权限及生产构建的浏览器验证，修复准备发布。
+- Claude 的 4c42489 / addee98 已完成首次发布；本轮 Codex 修复已发布，代码提交 a0dad4e，Actions 39890211948 成功；真实两账号、共享数据库、实时消息、照片权限及线上浏览器验证均已通过。
 - Supabase Free 项目 `beli-private`，ref `avxxytxplxqfkofqchrn`；WXY 和 LHJ 已创建并加入同一个空间，后续登录直接进入，无须再次创建/邀请。
 - WXY 初始状态保留原数据的 67 Been / 8 Want，个人排名尚无分数；LHJ 初始个人状态为空。没有为生产账号伪造用餐、分数或历史照片。
 - Site URL 与 Redirect URL 均已设置为正式 Pages 地址。
@@ -43,7 +43,7 @@
 
 ## 下一步 / 剩余边界
 
-1. 等本次提交的 Pages 工作流完成，在线复跑 cloud-ui 和常规 UI 检查；以真实运行结果更新此状态。
+1. 本轮代码已成功部署；`qa/cloud-ui-report.json` 的 base 为正式线上地址，在线两账号检查通过。后续只按用户反馈处理具体问题，勿反复给真实账号增加测试记录。
 2. 手机真机 Safari / Android 体验仍待用户验证。
 3. Beli 同一 build 的详情/弹窗/动效原始证据不全，不能称像素级完整复刻完成。
 4. GitHub Pages 和预置餐厅/照片是公开静态内容；Profile 登录保护的是成员云端数据，不是整个站点访问门禁。

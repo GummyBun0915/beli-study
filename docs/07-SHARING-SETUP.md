@@ -11,6 +11,12 @@
 
 官方来源：[Supabase 价格](https://supabase.com/pricing)、[邮件限制](https://supabase.com/docs/guides/auth/auth-smtp)、[密码登录](https://supabase.com/docs/guides/auth/passwords)、[GitHub Pages 计划](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)。免费额度和规则可能变化；以开通当天控制台为准。
 
+## 现在如何使用
+
+打开正式网站 → Profile → 选择 WXY 或 LHJ → 输入各自已设置的密码。两人已在同一空间，不要重复创建或邀请。
+
+以下 Step 1–9 供重建或排查配置时参考。
+
 ## Step 1 — 建立 Supabase 项目
 
 1. 打开 [Supabase Dashboard](https://supabase.com/dashboard)，注册/登录你的账号。
