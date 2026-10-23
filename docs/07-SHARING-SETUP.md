@@ -13,7 +13,7 @@
 
 ## 现在如何使用
 
-打开正式网站 → Profile → 选择 WXY 或 LHJ → 输入各自已设置的密码。两人已在同一空间，不要重复创建或邀请。
+打开正式网站 → 第一屏选择 WXY 或 LHJ → 输入各自已设置的密码 → 首页。登录状态会保留；Profile 内可退出。两人已在同一空间，不要重复创建或邀请。
 
 以下 Step 1–9 供重建或排查配置时参考。
 
@@ -69,7 +69,7 @@ Publishable key: sb_publishable_……
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | 你的 publishable/anon key |
 
 3. 打开 **Actions**，重新运行 **Deploy Pages** 工作流。
-4. 完成后打开网页，进入 **Profile → Private space**，应从“尚未开通”变为 WXY / LHJ 身份选择和密码输入。
+4. 完成后打开网页，第一屏应为 WXY / LHJ 身份选择和密码输入；成功登录后才显示首页。
 
 本地联调时，复制根目录 `.env.example` 为 `.env.local`，填写相同两项，再重启 `npm run dev`。`.env.local` 不提交到 Git。
 
@@ -85,7 +85,7 @@ Publishable key: sb_publishable_……
 
 ## Step 7 — WXY 创建二人空间
 
-1. WXY 在 App 的 **Profile → Private space** 选择 WXY 并输入密码登录。
+1. WXY 在网页第一屏选择 WXY 并输入密码登录；首次配置时进入 Profile → Private space。
 2. 填名字 WXY，点击 **创建空间**。
 3. 现有个人记录首次同步到自己的云端账号。
 4. 点击 **复制邀请链接**，私下发给另一人。邀请链接会轮换之前未用的邀请。

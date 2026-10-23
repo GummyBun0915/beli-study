@@ -8,10 +8,13 @@ const contexts=await Promise.all([browser.newContext({viewport:{width:390,height
 const [a,b]=await Promise.all(contexts.map(c=>c.newPage()));const errors=[];
 for(const p of [a,b]){p.setDefaultTimeout(25000);p.on('pageerror',e=>errors.push(e.message));}
 const login=async(page,name)=>{
-  await page.goto(`${base}#/profile`);
+  await page.goto(base);
+  assert.equal(await page.locator('.feed-post, .bottom-nav, .profile-main').count(),0);
   await page.getByRole('group',{name:'选择身份'}).getByRole('button',{name,exact:true}).click();
   await page.getByLabel('登录密码').fill(process.env.CLOUD_TEST_PASSWORD);
   await page.getByRole('button',{name:'登录',exact:true}).click();
+  await page.locator('.feed-header').waitFor();
+  await page.goto(`${base}#/profile`);
   await page.getByRole('heading',{name:'Our dining space',exact:true}).waitFor();
   await page.locator('.sharing-title').getByText('已同步',{exact:true}).waitFor();
   assert.equal(await page.locator('.profile-name').innerText(),name);
@@ -35,7 +38,7 @@ try{
   }else throw new Error('Choose an absent shared restaurant before rerunning; test will not remove an existing favourite');
   await b.goto(`${base}#/profile`);await b.getByRole('button',{name:'退出登录',exact:true}).click();
   await b.getByRole('group',{name:'选择身份'}).waitFor();
-  assert.equal((await b.locator('.profile-metrics strong').allTextContents())[0],'0');
+  assert.equal(await b.locator('.profile-main, .feed-post, .bottom-nav').count(),0);
   // Same browser switches from LHJ to WXY and back without inheriting personal visits.
   await login(b,'WXY');await b.getByRole('button',{name:'退出登录',exact:true}).click();
   await b.getByRole('group',{name:'选择身份'}).waitFor();await login(b,'LHJ');
@@ -44,9 +47,10 @@ try{
   await b.locator('.sharing-title').getByText('已同步',{exact:true}).waitFor();
   assert.equal(await b.locator('.profile-avatar').innerText(),'L');
   assert.equal((await b.locator('.profile-metrics strong').allTextContents())[0],'0');
+  const reopened=await contexts[1].newPage();await reopened.goto(base);await reopened.locator('.feed-header').waitFor();assert.equal(await reopened.getByRole('group',{name:'选择身份'}).count(),0);assert.equal(await reopened.locator('.feed-post').count(),0);await reopened.close();
   await a.screenshot({path:'qa/sharing-wxy-mobile.png',fullPage:false});await b.screenshot({path:'qa/sharing-lhj-mobile.png',fullPage:false});
   assert.deepEqual(errors,[]);
-  const report={testedAt:new Date().toISOString(),base,passed:['real WXY/LHJ browser login','one shared room','W/L profile identity','WXY original 67 Been, LHJ empty','wishlist add/remove arrives without refresh','same-browser account switch isolated','session and records retained after reload'],errors};
+  const report={testedAt:new Date().toISOString(),base,passed:['first-screen login before any personal UI','real WXY/LHJ browser login','one shared room','W/L profile identity','WXY original 67 Been, LHJ empty','wishlist add/remove arrives without refresh','same-browser account switch isolated','session and records retained after reload','new tab restores remembered login'],errors};
   fs.writeFileSync('qa/cloud-ui-report.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
 }finally{
   if(toggled){try{await b.getByRole('button',{name:'已加入一起想去',exact:true}).click();}catch{console.error('Shared test item needs cleanup');}}

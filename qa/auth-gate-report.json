@@ -1,0 +1,13 @@
+{
+  "testedAt": "2026-10-23T02:53:22.376Z",
+  "base": "http://127.0.0.1:4178/beli-study/",
+  "passed": [
+    "all unauthenticated routes show login only",
+    "no guest personal feed or navigation",
+    "mobile and desktop login",
+    "identity hydration blocks stale personal content",
+    "LHJ arrives at own feed",
+    "logout returns to first-screen login"
+  ],
+  "errors": []
+}

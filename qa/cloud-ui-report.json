@@ -1,14 +1,16 @@
 {
-  "testedAt": "2026-10-23T02:34:44.750Z",
-  "base": "https://gummybun0915.github.io/beli-study/",
+  "testedAt": "2026-10-23T02:53:33.824Z",
+  "base": "http://127.0.0.1:4178/beli-study/",
   "passed": [
+    "first-screen login before any personal UI",
     "real WXY/LHJ browser login",
     "one shared room",
     "W/L profile identity",
     "WXY original 67 Been, LHJ empty",
     "wishlist add/remove arrives without refresh",
     "same-browser account switch isolated",
-    "session and records retained after reload"
+    "session and records retained after reload",
+    "new tab restores remembered login"
   ],
   "errors": []
 }

@@ -10,6 +10,7 @@ import type { Restaurant } from './data/restaurants';
 import { formattedVisitDate, imageUrl, regionName, regions, restaurants } from './data/restaurants';
 import { useFoodState, type FoodStatus, type FoodStateController } from './state/useFoodState';
 import { useSharing, type SharingController } from './state/useSharing';
+import { LoginScreen, SessionScreen } from './components/LoginScreen';
 import { SharingPanel } from './components/SharingPanel';
 import { LocalPhotos, VisitTimeline } from './components/VisitTimeline';
 import { RankingFlow } from './components/RankingFlow';
@@ -86,6 +87,7 @@ function App() {
   const [editingName, setEditingName] = useState(false);
   const food = useFoodState(restaurants);
   const sharing = useSharing(food);
+  useEffect(()=>{setRatingId(null);setFilterOpen(false);setEditingName(false);setActiveId(null);setToast('');},[sharing.userId]);
   const appliedCloudName = useRef<string | null>(null);
   useEffect(() => {
     const member = sharing.members.find(m => m.user_id === sharing.userId);
@@ -157,6 +159,13 @@ function App() {
   const detail = route.id ? restaurants.find(r => r.id === route.id) : null;
   const page = route.page === 'detail' && !detail ? 'feed' : route.page;
 
+  if(!sharing.authReady)return <SessionScreen message="正在恢复登录状态…"/>;
+  if(!sharing.userId)return <LoginScreen sharing={sharing} onSuccess={()=>navTo('feed')}/>;
+  if(!sharing.accountName)return <SessionScreen message="" error="当前账号无法访问" onSignOut={()=>void sharing.signOut()}/>;
+  if(sharing.loading||sharing.loadedUserId!==sharing.userId)return <SessionScreen message="正在载入你的记录…" error={sharing.error} onRetry={()=>void sharing.reloadCloud()} onSignOut={()=>void sharing.signOut()}/>;
+  const displayName=sharing.members.find(member=>member.user_id===sharing.userId)?.display_name||sharing.accountName;
+  if(!sharing.space)return <main className="login-screen"><div className="login-content"><span className="brand">beli</span><SharingPanel sharing={sharing} name={displayName} onOpen={()=>{}}/></div></main>;
+
   return <div className="app-shell">
     <aside className="desktop-rail">
       <div className="rail-logo">beli</div>
@@ -164,7 +173,7 @@ function App() {
       <p>Your favorite restaurants, ranked.</p>
     </aside>
     <main className={`app-main page-${page}`}>
-      {page === 'feed' && <FeedPage name={profileName} food={food} getStatus={food.getStatus} onOpen={r => navTo('detail', r.id)} onSearch={() => navTo('search')} onList={() => navTo('lists')} onToast={setToast} />}
+      {page === 'feed' && <FeedPage name={displayName} food={food} getStatus={food.getStatus} onOpen={r => navTo('detail', r.id)} onSearch={() => navTo('search')} onList={() => navTo('lists')} onToast={setToast} />}
       {page === 'lists' && <>
         <TopBar title={<span className="eyebrow">MY LISTS</span>} right={<><button className="icon-button" onClick={share} aria-label="分享列表"><Share2 size={19} /></button><button className="icon-button" onClick={() => setFilterOpen(true)} aria-label="更多筛选"><Menu size={21} /></button></>} />
         <div className="lists-heading"><button className="heading-dropdown" onClick={() => setFilterOpen(true)}>Restaurants <ChevronDown size={18} /></button><span className="list-count">{sortedFiltered.length} 家</span></div>
@@ -193,8 +202,8 @@ function App() {
       </>}
       {page === 'search' && <SearchPage query={query} onQuery={setQuery} onOpen={r => navTo('detail', r.id)} getStatus={food.getStatus} getScore={food.getScore} onRate={openRating} />}
       {page === 'rank' && <RankPage ranked={food.ranked} totalBeen={statusCount.been} onOpen={r => navTo('detail', r.id)} onExplore={() => navTo('lists')} onCompare={() => { const first = food.ranked[0]; if (first) openRating(first.restaurant, 'rerank'); }} onUndo={food.undoComparison} hasComparisons={food.comparisonHistory.length > 0} />}
-      {page === 'profile' && <ProfilePage name={profileName} editing={editingName} onEdit={setEditingName} onName={setProfileName} onSave={() => { const value = profileName.trim() || 'WXY'; setProfileName(value); localStorage.setItem('beli-study-profile-name', value); if (sharing.space) void sharing.updateName(value).catch(() => setToast('名字尚未同步，请重试')); setEditingName(false); }} counts={statusCount} rated={food.ranked.length} onTab={tab => { setListTab(tab); navTo('lists'); }} onRank={() => navTo('rank')} onReset={() => { if (window.confirm('清除本机保存的去过/想去、评分和比较记录？')) food.reset(); }} />}
-      {page === 'profile' && <SharingPanel sharing={sharing} name={profileName} onOpen={r => navTo('detail', r.id)} />}
+      {page === 'profile' && <ProfilePage name={editingName?profileName:displayName} editing={editingName} onEdit={setEditingName} onName={setProfileName} onSave={() => { const value = profileName.trim() || 'WXY'; setProfileName(value); localStorage.setItem('beli-study-profile-name', value); if (sharing.space) void sharing.updateName(value).catch(() => setToast('名字尚未同步，请重试')); setEditingName(false); }} counts={statusCount} rated={food.ranked.length} onTab={tab => { setListTab(tab); navTo('lists'); }} onRank={() => navTo('rank')} onReset={() => { if (window.confirm('清除本机保存的去过/想去、评分和比较记录？')) food.reset(); }} />}
+      {page === 'profile' && <SharingPanel sharing={sharing} name={displayName} onOpen={r => navTo('detail', r.id)} />}
       {page === 'detail' && detail && <DetailPage food={food} sharing={sharing} onToast={setToast} r={detail} status={food.getStatus(detail.id)} score={food.getScore(detail.id)} onBack={() => { if (window.history.length > 1) window.history.back(); else navTo('lists'); }} onStatus={status => food.setStatus(detail.id, status)} onRate={() => openRating(detail)} onRerank={() => openRating(detail, 'rerank')} onShare={share} />}
     </main>
     <BottomNav page={page} />
@@ -231,7 +240,7 @@ function FeedPage({ name, food, getStatus, onOpen, onSearch, onList, onToast }: 
     <button className="search-field fake-input" onClick={onSearch}><Search size={18} /><span>Search restaurant, cuisine, occasion</span></button>
     <div className="feed-pills"><button onClick={onList}><Compass size={15} /> 探索列表</button><button onClick={() => document.getElementById('your-feed')?.scrollIntoView({ behavior: 'smooth' })}><Clock3 size={15} /> 最近记录</button><button onClick={onList}><Bookmark size={15} /> 想去</button></div>
     <section className="feed-section"><div className="section-head"><h2>FEATURED LISTS</h2><button onClick={onList}>See all <ChevronRight size={13} /></button></div><div className="featured-scroll">{featured.map(f => { const first = f.data.find(r => r.coverUrl); return <button className={`featured-card ${f.color}`} key={f.label} onClick={onList}>{first?.coverUrl && <img src={first.coverUrl} alt="" loading="lazy" />}<div className="featured-shade" /><strong>{f.label}</strong><span>{f.sub}</span></button>; })}</div></section>
-    <section className="feed-section feed-diary" id="your-feed"><div className="section-head"><h2>YOUR FEED</h2></div>{Object.entries(food.snapshot.visits).flatMap(([id, visits]) => visits.map(visit => ({ visit, r: restaurants.find(r => r.id === id)! }))).sort((a,b) => b.visit.recordedAt.localeCompare(a.visit.recordedAt)).map(({visit,r}) => <article className="feed-post" key={visit.id}><button className="post-head" onClick={() => onOpen(r)}><span className="mini-avatar">{name.charAt(0).toUpperCase()}</span><span><strong>又去了 {r.brand}</strong><small>{visit.branch || r.actualCity}</small></span><ChevronRight size={17}/></button><LocalPhotos ids={visit.photoIds} label={r.displayName}/>{visit.notes && <p className="post-review">{visit.notes}</p>}{visit.dishes.filter(Boolean).length > 0 && <p className="post-dishes"><strong>Favorite Dishes:</strong> {visit.dishes.filter(Boolean).join("、")}</p>}<div className="post-footer"><span>{visit.visitedAt || "日期未填写"}</span></div></article>)}{visited.slice(0, 24).map(r => <article className="feed-post" key={r.id}><button className="post-head" onClick={() => onOpen(r)}><span className="mini-avatar">{name.charAt(0).toUpperCase()}</span><span><strong>我记录了 {r.brand}</strong><small><InfoLine r={r} /></small></span><ChevronRight size={17} /></button>{r.images.length > 0 && <PhotoCarousel className="feed-gallery" images={r.images} label={r.displayName} onOpen={index => setGallery({ restaurant: r, index })} />}{r.reviewText && <p className="post-review"><strong>Notes:</strong> {r.reviewText}</p>}{r.dishes.length > 0 && <p className="post-dishes"><strong>Favorite Dishes:</strong> {r.dishes.map(d => d.name).join('、')}</p>}<div className="post-footer"><span><Heart size={18} /> <Share2 size={18} /></span><span>{formattedVisitDate(r) || '访问日期未记录'}</span></div></article>)}</section>
+    <section className="feed-section feed-diary" id="your-feed"><div className="section-head"><h2>YOUR FEED</h2></div>{Object.entries(food.snapshot.visits).flatMap(([id, visits]) => visits.map(visit => ({ visit, r: restaurants.find(r => r.id === id)! }))).sort((a,b) => b.visit.recordedAt.localeCompare(a.visit.recordedAt)).map(({visit,r}) => <article className="feed-post" key={visit.id}><button className="post-head" onClick={() => onOpen(r)}><span className="mini-avatar">{name.charAt(0).toUpperCase()}</span><span><strong>{name} 又去了 {r.brand}</strong><small>{visit.branch || r.actualCity}</small></span><ChevronRight size={17}/></button><LocalPhotos ids={visit.photoIds} label={r.displayName}/>{visit.notes && <p className="post-review">{visit.notes}</p>}{visit.dishes.filter(Boolean).length > 0 && <p className="post-dishes"><strong>Favorite Dishes:</strong> {visit.dishes.filter(Boolean).join("、")}</p>}<div className="post-footer"><span>{visit.visitedAt || "日期未填写"}</span></div></article>)}{visited.slice(0, 24).map(r => <article className="feed-post" key={r.id}><button className="post-head" onClick={() => onOpen(r)}><span className="mini-avatar">{name.charAt(0).toUpperCase()}</span><span><strong>{name} 记录了 {r.brand}</strong><small><InfoLine r={r} /></small></span><ChevronRight size={17} /></button>{r.images.length > 0 && <PhotoCarousel className="feed-gallery" images={r.images} label={r.displayName} onOpen={index => setGallery({ restaurant: r, index })} />}{r.reviewText && <p className="post-review"><strong>Notes:</strong> {r.reviewText}</p>}{r.dishes.length > 0 && <p className="post-dishes"><strong>Favorite Dishes:</strong> {r.dishes.map(d => d.name).join('、')}</p>}<div className="post-footer"><span><Heart size={18} /> <Share2 size={18} /></span><span>{formattedVisitDate(r) || '访问日期未记录'}</span></div></article>)}</section>
     {gallery && <PhotoViewer images={gallery.restaurant.images} label={gallery.restaurant.displayName} initialIndex={gallery.index} onClose={() => setGallery(null)} />}
   </>;
 }

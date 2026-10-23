@@ -17,17 +17,18 @@ npm run dev
 ```sh
 npm run check
 npm run test:ui
+npm run test:auth
 npm run build
 npm run preview
 ```
 
-交互测试默认使用本机 Google Chrome；其他环境设置 `CHROME_PATH`。测试使用独立临时浏览器，不改动你正在使用的记录。
+交互测试使用拦截认证/数据库/实时连接的独立服务夹具，不访问生产数据；auth 测试验证未登录路由与加载期间不显示个人内容。真实共享联调单独使用 tests/cloud-ui.mjs。测试默认使用本机 Google Chrome；其他环境设置 `CHROME_PATH`。测试使用独立临时浏览器，不改动你正在使用的记录。
 
 ## 当前边界
 
 - 从只读 `dachitech` 公开投影复制 75 家餐厅与 172 个被引用图片资产，餐厅和照片数据保留原样。36 家有坐标，缺位置的店继续显示在列表中。
 - 新记录、排名和状态默认保存在当前浏览器。新增照片保存在 IndexedDB。
-- 已上线：<https://gummybun0915.github.io/beli-study/>（GitHub Pages，push main 自动部署）。前端已接入 Supabase（beli-private），WXY / LHJ 账号可在 Profile → Private space 用密码登录；**两账号真实登录、独立浏览器共享、权限与账号切换已通过验证**，报告和剩余边界见 [HANDOFF](HANDOFF.md)。
+- 已上线：<https://gummybun0915.github.io/beli-study/>（GitHub Pages，push main 自动部署）。前端已接入 Supabase（beli-private），打开网页先选择 WXY / LHJ 并输入密码，登录状态会保留；Profile 用于共享管理及退出登录；**两账号真实登录、独立浏览器共享、权限与账号切换已通过验证**，报告和剩余边界见 [HANDOFF](HANDOFF.md)。
 - 2026 商店图与 2026-09 实际操作分析用于界面研究；详情页和部分状态没有同一 build 的原始实屏，尚不能声称完整像素级一致。
 - 头像偏好：WXY、蓝底白色 W。产品界面不展示数据工程来源或上游评级体系。
 

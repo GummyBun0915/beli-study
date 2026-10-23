@@ -9,9 +9,10 @@
     "preview": "vite preview --host 127.0.0.1",
     "check": "tsc --noEmit",
     "data:sync": "node scripts/sync-source.mjs",
-    "data:check": "node scripts/sync-source.mjs /Users/jiguang/Desktop/Personal/01_\u4e2a\u4eba\u9879\u76ee/dachitech --check",
+    "data:check": "node scripts/sync-source.mjs /Users/jiguang/Desktop/Personal/01_个人项目/dachitech --check",
     "test:ui": "node tests/ui.mjs",
-    "data:verify": "node scripts/verify-import.mjs"
+    "data:verify": "node scripts/verify-import.mjs",
+    "test:auth": "node tests/auth-gate.mjs"
   },
   "dependencies": {
     "@maplibre/maplibre-gl-leaflet": "^0.1.4",

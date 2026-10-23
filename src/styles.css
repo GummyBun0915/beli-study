@@ -383,3 +383,32 @@ h1,h2,h3,p { margin-top: 0; }
 .restaurant-row:not(.compact) .row-actions, .search-row .row-actions { padding-left: 16px; }
 .sentiment-options button > span { width: 56px; height: 56px; }
 .account-password { margin-top: 20px; color: #6c8b7c; font-size: 11px; }.account-password summary { cursor: pointer; }
+
+/* Authentication is a full first screen; personal routes mount only after identity hydration. */
+.login-screen { min-height:100dvh; display:grid; place-items:center; padding:52px 24px; background:#fafbf9; }
+.login-content { width:100%; max-width:360px; animation:login-enter .25s ease-out both; }
+.login-brand { text-align:center; margin-bottom:52px; }
+.login-brand .brand { display:block; font-size:58px; }
+.login-brand p { margin:19px 0 0; color:var(--muted); font-size:13px; letter-spacing:.025em; }
+.login-form h1 { margin-bottom:22px; color:var(--ink); font-size:21px; font-weight:600; letter-spacing:-.035em; }
+.login-identities { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:29px; }
+.login-identities > button { position:relative; display:flex; align-items:center; gap:12px; min-height:82px; padding:16px; background:white; border:1px solid #dee5e1; border-radius:10px; transition:border-color .15s,background .15s; }
+.login-identities > button.selected { background:#eef5f1; border-color:var(--teal); }
+.login-avatar { display:grid; place-items:center; flex-shrink:0; width:36px; height:36px; border-radius:50%; color:white; background:#286ad7; font-size:19px; font-weight:600; }
+.login-identities strong { font-size:14px; }
+.login-check { position:absolute; right:7px; top:7px; height:15px; color:var(--teal); }
+.login-form label { display:block; margin-bottom:9px; font-size:13px; font-weight:600; }
+.login-password-field { display:flex; align-items:center; min-height:52px; background:white; border:1px solid #dce3df; border-radius:7px; padding-right:8px; }
+.login-password-field:focus-within { border-color:var(--teal); outline:2px solid #dceae3; }
+.login-password-field input { width:100%; min-width:0; padding:15px; border:0; outline:none; background:transparent; font-size:16px; }
+.login-password-field input:focus-visible { outline:none; }
+.login-password-field .icon-button { color:var(--muted); flex-shrink:0; }
+.login-form .form-error { margin-top:12px; margin-bottom:0; font-size:12px; }
+.login-submit { display:flex; justify-content:center; align-items:center; gap:10px; width:100%; min-height:52px; margin-top:24px; font-size:14px; }
+.login-submit:disabled,.login-identities button:disabled { cursor:wait; opacity:.65; }
+.login-status { text-align:center; }
+.login-status .brand { display:block; font-size:44px; margin-bottom:26px; }
+.login-status p { color:var(--muted); font-size:13px; line-height:1.7; }
+.login-status .text-button { margin-top:20px; }
+@keyframes login-enter { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+@media(prefers-reduced-motion:reduce) { .login-content { animation:none; } .login-identities > button { transition:none; } }

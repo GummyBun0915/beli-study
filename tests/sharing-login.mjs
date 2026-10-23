@@ -18,7 +18,7 @@ try{
     await page.getByRole('group',{name:'选择身份'}).getByRole('button',{name,exact:true}).click();
     await page.getByLabel('登录密码').fill('test-only-password');
     await page.getByRole('button',{name:'登录',exact:true}).click();
-    await page.locator('.sharing-panel .form-error').waitFor();
+    await page.getByRole('alert').waitFor();
     assert.equal(requests.at(-1).email,`${name.toLowerCase()}@beli.example.com`);
     assert.equal(requests.at(-1).password,'test-only-password');
   }

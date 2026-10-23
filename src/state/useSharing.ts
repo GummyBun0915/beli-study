@@ -11,6 +11,8 @@ interface Space { id: string; name: string; owner_id: string }
 interface SharedWant { restaurant_id: string; added_by: string }
 export function useSharing(food: FoodStateController) {
   const [userId,setUserId]=useState<string|null>(null);
+  const [authReady,setAuthReady]=useState(false);
+  const [loadedUserId,setLoadedUserId]=useState<string|null>(null);
   const [accountName,setAccountName]=useState<string>('');
   const [space,setSpace]=useState<Space|null>(null);
   const [members,setMembers]=useState<Member[]>([]);
@@ -21,6 +23,7 @@ export function useSharing(food: FoodStateController) {
   const [hasLocalBackup,setHasLocalBackup]=useState(false);
   const foodRef=useRef(food);foodRef.current=food;
   const identityEpoch=useRef(0);
+  const authIdentity=useRef<string|null>(null);
   const [status,setStatus]=useState('');
   const [realtimeStatus,setRealtimeStatus]=useState('');
   const [error,setError]=useState('');
@@ -51,7 +54,7 @@ export function useSharing(food: FoodStateController) {
     return cleanRows;
   },[photoTransfer]);
   const loadSpace=useCallback(async(uid:string)=>{
-    if(!client)return;setReady(false);setLoading(true);setError('');
+    if(!client)return;setReady(false);setLoadedUserId(null);setLoading(true);setError('');
     const epoch=++identityEpoch.current;
     try{
     const previousOwner=localStorage.getItem('beli-food-owner');
@@ -67,13 +70,13 @@ export function useSharing(food: FoodStateController) {
     }
       const {data:membership,error}=await client.from('beli_members').select('space_id').eq('user_id',uid).maybeSingle();if(error)throw error;
       if(epoch!==identityEpoch.current)return;
-      if(!membership){setSpace(null);setMembers([]);return;}
+      if(!membership){setSpace(null);setMembers([]);setLoadedUserId(uid);return;}
       const {data,error:spaceError}=await client.from('beli_spaces').select('id,name,owner_id').eq('id',membership.space_id).single();if(spaceError)throw spaceError;
       if(epoch!==identityEpoch.current)return;
       const room=data as Space;setSpace(room);const rows=await refresh(room.id);if(epoch!==identityEpoch.current)return;const own=rows?.find(r=>r.user_id===uid);
       if(own){await photoTransfer(own.payload,room.id,uid,false);if(epoch!==identityEpoch.current)return;try{if(JSON.stringify(local)!==JSON.stringify(own.payload))localStorage.setItem(`beli-before-cloud-backup:${uid}`,JSON.stringify(local));setHasLocalBackup(!!localStorage.getItem(`beli-before-cloud-backup:${uid}`));}catch{/* no overwrite of cloud data */}restore(own.payload);lastSynced.current=JSON.stringify(own.payload);revision.current=own.revision;}
       else{revision.current=0;lastSynced.current='';if(room.owner_id!==uid)restore(emptySnapshot('empty'));}
-      conflict.current=false;setStatus(own?'已同步':'准备首次同步');setReady(true);
+      conflict.current=false;setStatus(own?'已同步':'准备首次同步');setReady(true);setLoadedUserId(uid);
     }catch(err){if(epoch===identityEpoch.current)setError(err instanceof Error?err.message:'连接失败');}
     finally{if(epoch===identityEpoch.current)setLoading(false);}
   // Only identity and explicit reloads load the cloud snapshot; local edits must never trigger a download.
@@ -81,11 +84,17 @@ export function useSharing(food: FoodStateController) {
   },[refresh,restore,photoTransfer]);
   useEffect(()=>{
     const hash=decodeURIComponent(location.hash);if(hash.startsWith('#/join/')){const token=hash.slice(7);sessionStorage.setItem('beli-invite',token);setInvite(token);location.hash='/profile';}
-    if(!client)return;
-    client.auth.getSession().then(({data})=>{setUserId(data.session?.user.id||null);setAccountName(identityForEmail(data.session?.user.email)?.name||'');});
-    const {data}=client.auth.onAuthStateChange((_event,session)=>{setUserId(session?.user.id||null);setAccountName(identityForEmail(session?.user.email)?.name||'');});return()=>data.subscription.unsubscribe();
+    if(!client){setAuthReady(true);return;}
+    let cancelled=false;
+    const applySession=(session:{user:{id:string;email?:string}}|null)=>{
+      if(cancelled)return;const uid=session?.user.id||null;
+      if(authIdentity.current!==uid){authIdentity.current=uid;identityEpoch.current++;setLoadedUserId(null);setReady(false);}
+      setUserId(uid);setAccountName(identityForEmail(session?.user.email)?.name||'');setAuthReady(true);
+    };
+    client.auth.getSession().then(({data,error})=>{if(cancelled)return;if(error)setError('登录状态已失效，请重新登录。');applySession(data.session);}).catch(()=>{if(!cancelled){setError('暂时无法读取登录状态，请重试。');setAuthReady(true);}});
+    const {data}=client.auth.onAuthStateChange((_event,session)=>applySession(session));return()=>{cancelled=true;data.subscription.unsubscribe();};
   },[]);
-  useEffect(()=>{if(userId)void loadSpace(userId);else{setReady(false);setSpace(null);setMembers([]);setStates([]);setWants([]);}},[userId,loadSpace]);
+  useEffect(()=>{if(userId)void loadSpace(userId);else{setReady(false);setLoadedUserId(null);setSpace(null);setMembers([]);setStates([]);setWants([]);}},[userId,loadSpace]);
   useEffect(()=>{
     if(!client||!space)return;
     let cancelled=false;let channel:ReturnType<typeof client.channel>|undefined;
@@ -112,7 +121,7 @@ export function useSharing(food: FoodStateController) {
       catch(err){const message=err instanceof Error?err.message:String((err as {message?:string})?.message||'同步失败');if(message.includes('SYNC_CONFLICT')){conflict.current=true;setReady(false);setError('另一台设备已有更新，请先载入云端记录。');}else setError(message);setStatus('同步未完成');}
     });},700);return()=>clearTimeout(timer);
   },[food.snapshot,space,userId,ready,tick,photoTransfer,refresh]);
-  const signIn=async(name:IdentityName,password:string)=>{if(!client)return;const identity=identities.find(item=>item.name===name);if(!identity)throw new Error('请选择身份');const {error}=await client.auth.signInWithPassword({email:identity.email,password});if(error)throw new Error((error.code==='invalid_credentials'||/invalid login credentials/i.test(error.message))?'密码不正确，请重试':'暂时无法登录，请稍后重试');};
+  const signIn=async(name:IdentityName,password:string)=>{if(!client)throw new Error('暂时无法连接，请稍后重试');setError('');const identity=identities.find(item=>item.name===name);if(!identity)throw new Error('请选择身份');const {error}=await client.auth.signInWithPassword({email:identity.email,password});if(error)throw new Error((error.code==='invalid_credentials'||/invalid login credentials/i.test(error.message))?'密码不正确，请重试':'暂时无法登录，请稍后重试');};
   const changePassword=async(password:string)=>{if(!client)return;const {error}=await client.auth.updateUser({password});if(error)throw error;};
   const updateName=async(name:string)=>{if(!client||!space)return;const {error}=await client.rpc('beli_update_name',{member_name:name});if(error)throw error;await refresh(space.id);};
   const sendLink=async(email:string)=>{if(!client)return;const {error}=await client.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+import.meta.env.BASE_URL}});if(error)throw error;setStatus('登录链接已发送，请查收邮件');};
@@ -121,6 +130,16 @@ export function useSharing(food: FoodStateController) {
   const inviteLink=async()=>{if(!client||!space)return '';const {data,error}=await client.rpc('beli_rotate_invite',{target_space:space.id});if(error)throw error;const link=`${location.origin}${import.meta.env.BASE_URL}#/join/${data}`;await navigator.clipboard.writeText(link);return link;};
   const toggleWant=async(id:string)=>{if(!client||!space||!userId)return;const exists=wants.some(row=>row.restaurant_id===id);const result=exists?await client.from('beli_wants').delete().eq('space_id',space.id).eq('restaurant_id',id):await client.from('beli_wants').insert({space_id:space.id,restaurant_id:id,added_by:userId});if(result.error)throw result.error;await refresh(space.id);};
   const downloadLocalBackup=()=>{if(!userId)return;const saved=localStorage.getItem(`beli-before-cloud-backup:${userId}`);if(!saved)return;const url=URL.createObjectURL(new Blob([saved],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=`beli-${accountName||'records'}-backup.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-  return{configured:!!client,userId,accountName,space,members,states,wants,status:realtimeStatus||status,error,invite,ready,loading,hasLocalBackup,downloadLocalBackup,signIn,changePassword,updateName,sendLink,create,join,inviteLink,toggleWant,retry:()=>setTick(v=>v+1),reloadCloud:()=>userId?loadSpace(userId):Promise.resolve(),signOut:async()=>{identityEpoch.current++;setReady(false);const uid=userId;if(uid)localStorage.setItem(`beli-food-cache:${uid}`,JSON.stringify(foodRef.current.snapshot));await queue.current;await client?.auth.signOut({scope:'local'});restore(emptySnapshot('empty'));localStorage.removeItem('beli-food-owner');}};
+  const signOut=async()=>{
+    const uid=userId;const wasReady=ready;
+    identityEpoch.current++;setReady(false);setLoadedUserId(null);
+    try{
+      if(uid)localStorage.setItem(`beli-food-cache:${uid}`,JSON.stringify(foodRef.current.snapshot));
+      await queue.current;const result=await client?.auth.signOut({scope:'local'});
+      if(result?.error)throw result.error;
+      restore(emptySnapshot('empty'));localStorage.removeItem('beli-food-owner');
+    }catch{setError('退出未完成，请检查网络或本机存储后重试。');setLoadedUserId(uid);setReady(wasReady);}
+  };
+  return{configured:!!client,authReady,loadedUserId,userId,accountName,space,members,states,wants,status:realtimeStatus||status,error,invite,ready,loading,hasLocalBackup,downloadLocalBackup,signIn,changePassword,updateName,sendLink,create,join,inviteLink,toggleWant,retry:()=>setTick(v=>v+1),reloadCloud:()=>userId?loadSpace(userId):Promise.resolve(),signOut};
 }
 export type SharingController=ReturnType<typeof useSharing>;

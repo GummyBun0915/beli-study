@@ -10,6 +10,7 @@
 - Supabase Free 项目 `beli-private`，ref `avxxytxplxqfkofqchrn`；WXY 和 LHJ 已创建并加入同一个空间，后续登录直接进入，无须再次创建/邀请。
 - WXY 初始状态保留原数据的 67 Been / 8 Want，个人排名尚无分数；LHJ 初始个人状态为空。没有为生产账号伪造用餐、分数或历史照片。
 - Site URL 与 Redirect URL 均已设置为正式 Pages 地址。
+- 网页第一屏已改为独立登录页；所有路由需先选 WXY/LHJ、输入密码。有效会话自动恢复，载入本人状态前不挂载个人页面和导航。新入口待本轮 Pages 发布验收。
 - 公开注册已关闭，匿名登录关闭。账号采用内部标识 + 云端密码认证，界面只选身份、输入密码，无需邮件验证。
 
 ## 项目与约束
@@ -22,6 +23,8 @@
 产品不展示上游项目名、上游评级或数据工程说明。WXY 为蓝底 W，LHJ 为 L。餐厅 ID 稳定；同一餐厅一份排名，多次用餐各自记录。餐厅/照片不可编造。
 
 ## 本轮修复
+
+0. 独立 LoginScreen 与会话/用户数据加载门禁；Profile 不再承载未登录表单。Feed 标明已登录用户名字。`npm run test:auth` 验证所有未登录 hash 路由及载入期间无个人内容；登录状态由 Supabase 持久会话恢复，不保存密码。
 
 1. 创建者头像由姓名首字母生成，不再要求 WXY 必须先创建；增量迁移 `supabase/migrations/20261023_creator_avatar.sql` 已在线执行成功，原始 setup.sql 同步修正。
 2. 登录先等本人云端记录加载，切换账号按 user ID 分开缓存，旧身份待同步任务失效；退出仅结束当前设备会话并清空当前显示记录。
@@ -43,10 +46,10 @@
 
 ## 下一步 / 剩余边界
 
-1. 本轮代码已成功部署；`qa/cloud-ui-report.json` 的 base 为正式线上地址，在线两账号检查通过。后续只按用户反馈处理具体问题，勿反复给真实账号增加测试记录。
+1. 此前共享修复已成功部署；独立登录入口的本轮发布需等 Actions 成功并复核。`qa/cloud-ui-report.json` 的 base 为正式线上地址，在线两账号检查通过。后续只按用户反馈处理具体问题，勿反复给真实账号增加测试记录。
 2. 手机真机 Safari / Android 体验仍待用户验证。
 3. Beli 同一 build 的详情/弹窗/动效原始证据不全，不能称像素级完整复刻完成。
-4. GitHub Pages 和预置餐厅/照片是公开静态内容；Profile 登录保护的是成员云端数据，不是整个站点访问门禁。
+4. GitHub Pages 和预置餐厅/照片是公开静态内容；应用界面入口已要求登录，成员云端数据由服务端权限保护；GitHub Pages 的静态文件地址仍公开，不能把前端入口等同服务器对所有静态文件的保密。
 5. CI 的上游 Action Node 20 迁移提示和地图大 chunk 提示目前不阻止构建；没有为消除提示盲目更换未知版本。
 
 ## 运行和后续修改
@@ -57,6 +60,7 @@ npm run dev
 npm run check
 npm run data:verify
 npm run test:ui
+npm run test:auth
 VITE_BASE_PATH=/beli-study/ npm run build
 VITE_BASE_PATH=/beli-study/ npm run preview -- --port 4178
 ```

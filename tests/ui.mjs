@@ -1,6 +1,7 @@
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {mockSharing} from './helpers/mock-sharing.mjs';
 const base=process.env.TEST_URL || 'http://127.0.0.1:5173/';
 const executablePath=process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const data=JSON.parse(fs.readFileSync('src/data/restaurants.generated.json','utf8')).restaurants;
@@ -9,6 +10,7 @@ const second=data.find(r=>r.brand.includes('笨萝卜'));
 const multi=data.find(r=>r.images.length>2);
 const browser=await chromium.launch({headless:true,executablePath});
 const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
+await mockSharing(page,{preferLocalSnapshot:true});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 fs.mkdirSync('qa',{recursive:true});
 const route=async hash=>{await page.goto(`${base}#/${hash}`);};
@@ -40,7 +42,7 @@ try{
   const after=await page.evaluate(()=>JSON.parse(localStorage.getItem('beli-dachitech:food-state:v2')));assert.equal(after.visits[first.id].length,3);
   await route(`restaurant/${multi.id}`);const gallery=page.locator('.detail-carousel');await gallery.getByRole('button',{name:'查看第 2 张照片'}).click();await page.waitForTimeout(350);assert.equal(await gallery.locator('.carousel-count').innerText(),`2 / ${multi.images.length}`);await gallery.locator('.photo-slide').nth(1).click();await page.keyboard.press('ArrowRight');assert((await page.locator('.viewer-controls').innerText()).includes(`3 / ${multi.images.length}`));await page.keyboard.press('Escape');
   await route('search');await page.getByRole('searchbox').fill('笨萝卜');await page.locator('.search-results-title').getByText('1 家餐厅').waitFor();assert.equal(await page.locator('.search-row').count(),1);
-  await route('profile');assert.equal(await page.locator('.profile-avatar').innerText(),'W');assert.equal(await page.locator('.profile-name').innerText(),'WXY');await page.locator('.sharing-unavailable, [aria-label="选择身份"]').first().waitFor();await page.screenshot({path:'qa/profile-mobile.png'});
+  await route('profile');assert.equal(await page.locator('.profile-avatar').innerText(),'W');assert.equal(await page.locator('.profile-name').innerText(),'WXY');await page.getByRole('heading',{name:'Our dining space',exact:true}).waitFor();await page.screenshot({path:'qa/profile-mobile.png'});
   await route('lists');assert.equal(await page.locator('.row-tags').filter({hasText:/待定级|星选|星推介/}).count(),0);await page.screenshot({path:'qa/lists-mobile.png'});
   await page.getByRole('button',{name:'Map',exact:true}).click();await page.locator('.beli-map-pin').first().waitFor();assert.equal(await page.locator('.beli-map-pin').count(),24);await page.locator('.beli-map-pin').first().click({force:true});await page.locator('.map-preview').waitFor();
   await route('feed');await page.screenshot({path:'qa/feed-mobile.png'});const body=await page.locator('body').innerText();assert(!/星其林|dachitech|大吃特吃|来自.*真实/.test(body));const width=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:innerWidth}));assert(width.scroll<=width.viewport+1);assert.deepEqual(errors,[]);
