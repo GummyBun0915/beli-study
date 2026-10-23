@@ -1,6 +1,6 @@
 {
-  "testedAt": "2026-10-23T09:37:15.919Z",
-  "base": "http://127.0.0.1:5178/",
+  "testedAt": "2026-10-23T09:40:19.789Z",
+  "base": "https://gummybun0915.github.io/beli-study/",
   "fixture": true,
   "passed": [
     "AMap search runs only on demand, restaurant category, nationwide when no city",
@@ -12,7 +12,7 @@
     "overseas OpenStreetMap search filtered to the region country, credited, mapped to JP region",
     "manual add without coordinates, explicit country retained and region filter finds it",
     "AMap SDK initialization failure recovers on retry",
-    "AMap basemap with GCJ-02 pins and explicit center; localhost defaults to OSM"
+    "AMap basemap with GCJ-02 pins and explicit center; OSM fallback/override"
   ],
   "errors": []
 }
