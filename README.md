@@ -9,6 +9,8 @@
 ```sh
 cd /Users/jiguang/Documents/ChatGPT/项目集/beli-dachitech
 npm install
+# 首次运行需本地连接配置；已有 .env.local 时保留原文件
+test -e .env.local || cp .env.production .env.local
 npm run dev
 ```
 

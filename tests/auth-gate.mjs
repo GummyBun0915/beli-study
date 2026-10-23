@@ -13,6 +13,7 @@ try{
     assert.equal(await page.locator('.feed-post,.bottom-nav,.profile-main,.desktop-rail').count(),0);
     assert(!/我记录了|WXY 记录了/.test(await page.locator('body').innerText()));
   }
+  await page.locator('.login-content').evaluate(element=>Promise.all(element.getAnimations().map(animation=>animation.finished)));
   await page.screenshot({path:'qa/login-mobile.png'});
   await page.setViewportSize({width:1440,height:900});await page.screenshot({path:'qa/login-desktop.png'});await page.setViewportSize({width:390,height:844});
   await page.getByRole('group',{name:'选择身份'}).getByRole('button',{name:'LHJ',exact:true}).click();
