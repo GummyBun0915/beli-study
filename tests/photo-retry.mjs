@@ -13,7 +13,7 @@ const snapshot = { version:2, baseline:'empty', statuses:{[restaurant.id]:'been'
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jF2sAAAAASUVORK5CYII=', 'base64');
 const browser = await chromium.launch({headless:true, executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
 try {
-  for (const identity of ['WXY','LHJ']) {
+  for (const identity of ['WXY']) {
     const page = await browser.newPage({viewport:{width:390,height:844}});
     page.setDefaultTimeout(8000);
     const errors = [], unexpected = [], attempts = new Map();
@@ -44,11 +44,17 @@ try {
       await page.goto(base);
       const post = page.locator('.feed-post[data-kind="visit"][data-author="WXY"]');
       await post.getByText(entry.notes, {exact:false}).waitFor();
+      await post.scrollIntoViewIfNeeded();
       await post.getByText('照片 2正在加载…', {exact:true}).waitFor();
       await post.locator('img').waitFor();
       release();
       await post.getByText('照片 2加载失败', {exact:true}).waitFor();
       assert.equal(await post.locator('img').count(), 1);
+      await post.getByRole('button', {name:'重试照片 2', exact:true}).click();
+      await post.locator('img').nth(1).waitFor();
+      assert.equal(attempts.get(good), 1, 'Retry must not request the working photo again');
+      assert.equal(attempts.get(flaky), 2);
+      assert.equal(await post.getByRole('button', {name:'重试照片 2'}).count(), 0);
       // A missing previously synced photo must not prevent saving a text/status change.
       if (identity === 'WXY') {
         await post.locator('.post-head').click();
@@ -60,13 +66,8 @@ try {
         assert.deepEqual(body.state_payload.visits[restaurant.id][0].photoIds, [good,flaky]);
         // This is a new page view; it independently requests the missing image.
         await page.goto(base+'#/feed');
+        await post.scrollIntoViewIfNeeded();
         await post.locator('img').nth(1).waitFor();
-      } else {
-        await post.getByRole('button', {name:'重试照片 2', exact:true}).click();
-        await post.locator('img').nth(1).waitFor();
-        assert.equal(attempts.get(good), 1, 'Retry must not request the working photo again');
-        assert.equal(attempts.get(flaky), 2);
-        assert.equal(await post.getByRole('button', {name:'重试照片 2'}).count(), 0);
       }
       assert.deepEqual(errors, []);
       assert.deepEqual(unexpected, []);

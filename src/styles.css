@@ -452,6 +452,9 @@ h1,h2,h3,p { margin-top: 0; }
 .add-place-form div button.primary { background: var(--teal); border-color: var(--teal); color: white; }
 .add-place-form div button:disabled { opacity: .45; }
 
+.visit-photos { min-height: 1px; }
+.feed-post .visit-photos, .visit-timeline .visit-photos { min-height: 180px; }
+.feed-post .visit-photos:has(.photo-carousel), .visit-timeline .visit-photos:has(.photo-carousel) { min-height: 0; }
 .visit-photo-status {
   display: flex;
   flex-wrap: wrap;

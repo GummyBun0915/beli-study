@@ -11,6 +11,33 @@ interface Space { id: string; name: string; owner_id: string }
 const photoIds = (payload: FoodSnapshot) => new Set(
   [...Object.values(payload.logs), ...Object.values(payload.visits).flat()].flatMap(log => log.photoIds)
 );
+const MAX_PHOTO_DOWNLOADS = 4;
+const photoDownloads = { active: 0, waiters: [] as Array<() => void> };
+function acquirePhotoDownload(signal: AbortSignal) {
+  if (signal.aborted) return Promise.reject(signal.reason ?? new DOMException('Aborted', 'AbortError'));
+  if (photoDownloads.active < MAX_PHOTO_DOWNLOADS) {
+    photoDownloads.active += 1;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve, reject) => {
+    const grant = () => {
+      signal.removeEventListener('abort', onAbort);
+      photoDownloads.active += 1;
+      resolve();
+    };
+    const onAbort = () => {
+      photoDownloads.waiters = photoDownloads.waiters.filter(item => item !== grant);
+      reject(signal.reason ?? new DOMException('Aborted', 'AbortError'));
+    };
+    photoDownloads.waiters.push(grant);
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
+function releasePhotoDownload() {
+  photoDownloads.active = Math.max(0, photoDownloads.active - 1);
+  photoDownloads.waiters.shift()?.();
+}
+type StoredSession = { access_token: string; user: { id: string; email?: string } } | null;
 interface SharedWant { restaurant_id: string; added_by: string }
 export function useSharing(food: FoodStateController) {
   const [userId,setUserId]=useState<string|null>(null);
@@ -33,6 +60,21 @@ export function useSharing(food: FoodStateController) {
   const [invite,setInvite]=useState(()=>sessionStorage.getItem('beli-invite') || '');
   const [tick,setTick]=useState(0);
   const revision=useRef(0);const lastSynced=useRef('');const queue=useRef(Promise.resolve());const conflict=useRef(false);
+  const sessionRead=useRef<{at:number;value:Promise<StoredSession>}|null>(null);
+  const refreshedAt=useRef<{sid:string;at:number}|null>(null);
+  const readSession=useCallback(async():Promise<StoredSession>=>{
+    if(!client)return null;
+    const cached=sessionRead.current;
+    if(cached&&Date.now()-cached.at<8000)return cached.value;
+    const value=client.auth.getSession().then(({data,error})=>{
+      if(data.session)return data.session;
+      if(error)throw error;
+      return null;
+    });
+    sessionRead.current={at:Date.now(),value};
+    try{return await value;}catch(error){if(sessionRead.current?.value===value)sessionRead.current=null;throw error;}
+  },[]);
+  const rememberSession=useCallback((session:StoredSession)=>{sessionRead.current={at:Date.now(),value:Promise.resolve(session)};},[]);
   const restore=food.restore;
   const spaceId = space?.id;
   const loadPhoto = useCallback(async (ownerId: string, id: string, retry: boolean, signal: AbortSignal) => {
@@ -46,13 +88,18 @@ export function useSharing(food: FoodStateController) {
         if (local) return local;
       }
     }
-    const { data, error } = await client.storage.from('beli-photos').download(path, {}, {
-      signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]),
-      cache: retry ? 'reload' : 'default',
-    });
-    if (error) throw error;
-    if (data && !signal.aborted) void cachePhoto(path, data).catch(() => {});
-    return data;
+    await acquirePhotoDownload(signal);
+    try {
+      const { data, error } = await client.storage.from('beli-photos').download(path, {}, {
+        signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]),
+        cache: retry ? 'reload' : 'default',
+      });
+      if (error) throw error;
+      if (data && !signal.aborted) void cachePhoto(path, data).catch(() => {});
+      return data;
+    } finally {
+      releasePhotoDownload();
+    }
   }, [spaceId, userId]);
   const uploadNewPhotos = useCallback(async(payload:FoodSnapshot,sid:string,uid:string,synced:string)=>{
     if(!client)return;
@@ -65,32 +112,36 @@ export function useSharing(food: FoodStateController) {
       if(error&&error.statusCode!=='409')throw error;
     }
   },[]);
-  const refresh=useCallback(async(sid:string)=>{
+  const refresh=useCallback(async(sid:string,known?:StoredSession)=>{
     if(!client)return;
+    refreshedAt.current={sid,at:Date.now()};
+    try{
     const results=await Promise.all([
       client.from('beli_members').select('user_id,display_name,avatar_letter,avatar_color').eq('space_id',sid).eq('user_id',authIdentity.current!),
       client.from('beli_states').select('user_id,payload,revision').eq('space_id',sid).eq('user_id',authIdentity.current!),
       client.from('beli_wants').select('restaurant_id,added_by').eq('space_id',sid),
     ]);
     for(const result of results)if(result.error)throw result.error;
-    const session=(await client.auth.getSession()).data.session;
+    const session=known===undefined?await readSession():known;
+    refreshedAt.current={sid,at:Date.now()};
     const cleanRows=((results[1].data||[]) as unknown as SharedState[]).filter(row=>row.user_id===authIdentity.current).map(row=>({...row,payload:normalizeSnapshot({...row.payload,baseline:(row.user_id===session?.user.id ? identityForEmail(session?.user.email)?.name==='WXY' : identityForEmail(session?.user.email)?.name==='LHJ')?'source':'empty'},new Set(restaurants.map(r=>r.id)))}));
     const remote=cleanRows.find(row=>row.user_id===authIdentity.current);
     if(remote&&remote.revision>revision.current&&JSON.stringify(foodRef.current.snapshot)===lastSynced.current){revision.current=remote.revision;lastSynced.current=JSON.stringify(remote.payload);foodRef.current.restore(remote.payload);}
     setMembers(((results[0].data||[]) as unknown as Member[]).filter(member=>member.user_id===authIdentity.current));setStates(cleanRows);setWants((results[2].data||[]) as unknown as SharedWant[]);
     return cleanRows;
-  },[]);
+    }catch(error){refreshedAt.current=null;throw error;}
+  },[readSession]);
   const loadSpace=useCallback(async(uid:string)=>{
     if(!client)return;setReady(false);setLoadedUserId(null);setLoading(true);setError('');
     const epoch=++identityEpoch.current;
     try{
+    const session=await readSession();
     const previousOwner=localStorage.getItem('beli-food-owner');
     let local=foodRef.current.snapshot;
     if(previousOwner!==uid){
       localStorage.setItem(`beli-food-cache:${previousOwner||'local'}`,JSON.stringify(local));
       const saved=localStorage.getItem(`beli-food-cache:${uid}`);
-      const {data:session}=await client.auth.getSession();
-      const name=identityForEmail(session.session?.user.email)?.name;
+      const name=identityForEmail(session?.user.email)?.name;
       local=saved?normalizeSnapshot(JSON.parse(saved),new Set(restaurants.map(r=>r.id))):name==='WXY'&&!previousOwner?local:emptySnapshot(name==='WXY'?'source':'empty');
       if(epoch!==identityEpoch.current)return;
       restore(local);localStorage.setItem('beli-food-owner',uid);
@@ -100,15 +151,15 @@ export function useSharing(food: FoodStateController) {
       if(!membership){setSpace(null);setMembers([]);setLoadedUserId(uid);return;}
       const {data,error:spaceError}=await client.from('beli_spaces').select('id,name,owner_id').eq('id',membership.space_id).single();if(spaceError)throw spaceError;
       if(epoch!==identityEpoch.current)return;
-      const room=data as Space;setSpace(room);const rows=await refresh(room.id);if(epoch!==identityEpoch.current)return;const own=rows?.find(r=>r.user_id===uid);
-      if(own){const originalPayload=JSON.stringify(own.payload);own.payload={...own.payload,baseline:identityForEmail((await client.auth.getSession()).data.session?.user.email)?.name==='WXY'?'source':'empty'};if(own.payload.baseline==='source'&&!own.payload.sourceHistoryApplied){own.payload={...own.payload,sourceHistoryApplied:true,statuses:{...own.payload.statuses,...Object.fromEntries(Object.keys(own.payload.places||{}).map(id=>[id,'been' as const]))}};}try{if(JSON.stringify(local)!==JSON.stringify(own.payload))localStorage.setItem(`beli-before-cloud-backup:${uid}`,JSON.stringify(local));setHasLocalBackup(!!localStorage.getItem(`beli-before-cloud-backup:${uid}`));}catch{/* no overwrite of cloud data */}restore(own.payload);lastSynced.current=originalPayload;revision.current=own.revision;}
+      const room=data as Space;refreshedAt.current={sid:room.id,at:Date.now()};setSpace(room);const rows=await refresh(room.id,session);if(epoch!==identityEpoch.current)return;const own=rows?.find(r=>r.user_id===uid);
+      if(own){const originalPayload=JSON.stringify(own.payload);own.payload={...own.payload,baseline:identityForEmail(session?.user.email)?.name==='WXY'?'source':'empty'};if(own.payload.baseline==='source'&&!own.payload.sourceHistoryApplied){own.payload={...own.payload,sourceHistoryApplied:true,statuses:{...own.payload.statuses,...Object.fromEntries(Object.keys(own.payload.places||{}).map(id=>[id,'been' as const]))}};}try{if(JSON.stringify(local)!==JSON.stringify(own.payload))localStorage.setItem(`beli-before-cloud-backup:${uid}`,JSON.stringify(local));setHasLocalBackup(!!localStorage.getItem(`beli-before-cloud-backup:${uid}`));}catch{/* no overwrite of cloud data */}restore(own.payload);lastSynced.current=originalPayload;revision.current=own.revision;}
       else{revision.current=0;lastSynced.current='';if(room.owner_id!==uid)restore(emptySnapshot('empty'));}
       conflict.current=false;setStatus(own?'已同步':'准备首次同步');setReady(true);setLoadedUserId(uid);
     }catch(err){if(epoch===identityEpoch.current)setError(err instanceof Error?err.message:'连接失败');}
     finally{if(epoch===identityEpoch.current)setLoading(false);}
   // Only identity and explicit reloads load the cloud snapshot; local edits must never trigger a download.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[refresh,restore]);
+  },[readSession,refresh,restore]);
   useEffect(()=>{
     if(location.hash.startsWith('#/join/'))location.hash='/feed';
     if(!client){setAuthReady(true);return;}
@@ -118,27 +169,33 @@ export function useSharing(food: FoodStateController) {
       if(authIdentity.current!==uid){authIdentity.current=uid;identityEpoch.current++;setLoadedUserId(null);setReady(false);}
       setUserId(uid);setAccountName(identityForEmail(session?.user.email)?.name||'');setAuthReady(true);
     };
-    client.auth.getSession().then(({data,error})=>{if(cancelled)return;if(error)setError('登录状态已失效，请重新登录。');applySession(data.session);}).catch(()=>{if(!cancelled){setError('暂时无法读取登录状态，请重试。');setAuthReady(true);}});
-    const {data}=client.auth.onAuthStateChange((_event,session)=>applySession(session));return()=>{cancelled=true;data.subscription.unsubscribe();};
-  },[]);
+    readSession().then(session=>{if(!cancelled)applySession(session);}).catch(()=>{if(!cancelled){setError('暂时无法读取登录状态，请重试。');setAuthReady(true);}});
+    const {data}=client.auth.onAuthStateChange((_event,session)=>{rememberSession(session);applySession(session);});return()=>{cancelled=true;data.subscription.unsubscribe();};
+  },[readSession,rememberSession]);
   useEffect(()=>{if(userId)void loadSpace(userId);else{setReady(false);setLoadedUserId(null);setSpace(null);setMembers([]);setStates([]);setWants([]);}},[userId,loadSpace]);
   useEffect(()=>{
     if(!client||!space)return;
     let cancelled=false;let channel:ReturnType<typeof client.channel>|undefined;
     const update=()=>{void refresh(space.id).catch(err=>{if(!cancelled)setError(err instanceof Error?err.message:'更新共享记录失败');});};
     void (async()=>{
-      const {data}=await client.auth.getSession();if(cancelled||!data.session)return;
+      const session=await readSession();if(cancelled||!session)return;
       // Auth's sign-in notification does not await Realtime's token update.
-      await client.realtime.setAuth(data.session.access_token);if(cancelled)return;
+      await client.realtime.setAuth(session.access_token);if(cancelled)return;
       channel=client.channel(`space-${space.id}`)
         .on('postgres_changes',{event:'*',schema:'public',table:'beli_states',filter:`space_id=eq.${space.id}`},update)
         .on('postgres_changes',{event:'*',schema:'public',table:'beli_wants',filter:`space_id=eq.${space.id}`},update)
         .on('postgres_changes',{event:'*',schema:'public',table:'beli_members',filter:`space_id=eq.${space.id}`},update)
-        .subscribe(state=>{if(!cancelled&&state==='SUBSCRIBED')update();if(!cancelled)setRealtimeStatus(state==='SUBSCRIBED'?'':state==='CHANNEL_ERROR'||state==='TIMED_OUT'?'实时连接中断，定期刷新':'正在连接实时更新');});
+        .subscribe(state=>{
+          if(!cancelled&&state==='SUBSCRIBED'){
+            const recent=refreshedAt.current;
+            if(!(recent&&recent.sid===space.id&&Date.now()-recent.at<10000))update();
+          }
+          if(!cancelled)setRealtimeStatus(state==='SUBSCRIBED'?'':state==='CHANNEL_ERROR'||state==='TIMED_OUT'?'实时连接中断，定期刷新':'正在连接实时更新');
+        });
     })().catch(()=>{if(!cancelled)setRealtimeStatus('实时连接中断，定期刷新');});
     const poll=window.setInterval(update,30000);window.addEventListener('focus',update);
     return()=>{cancelled=true;clearInterval(poll);window.removeEventListener('focus',update);if(channel)void client?.removeChannel(channel);};
-  },[space,refresh]);
+  },[space,refresh,readSession]);
   useEffect(()=>{
     if(!client||!space||!userId||!ready)return;
     const epoch=identityEpoch.current;const payload=food.snapshot;const json=JSON.stringify(payload);if(json===lastSynced.current)return;
@@ -162,6 +219,7 @@ export function useSharing(food: FoodStateController) {
     identityEpoch.current++;setReady(false);setLoadedUserId(null);
     try{
       if(uid)localStorage.setItem(`beli-food-cache:${uid}`,JSON.stringify(foodRef.current.snapshot));
+      sessionRead.current=null;
       await queue.current;const result=await client?.auth.signOut({scope:'local'});
       if(result?.error)throw result.error;
       restore(emptySnapshot('empty'));localStorage.removeItem('beli-food-owner');
