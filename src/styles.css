@@ -64,8 +64,14 @@ h1,h2,h3,p { margin-top: 0; }
 .section-head h2 { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: .04em; }
 .section-head button { border: 0; background: none; display: flex; align-items: center; gap: 2px; font-size: 11px; color: var(--teal); font-weight: 700; }
 .section-head > span { font-size: 10px; color: #9aa2a2; }
-.featured-scroll { display: flex; gap: 10px; padding: 4px 20px 0; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; }
-.featured-card { position: relative; flex: 0 0 172px; height: 145px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; padding: 12px; color: #fff; border: 0; border-radius: 7px; text-align: left; scroll-snap-align: start; background: #456668; }
+.featured-scroll { display: flex; gap: 10px; padding: 4px 0 0; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; }
+.featured-card { position: relative; flex: 0 0 172px; height: 145px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; padding: 12px; color: #fff; border: 0; border-radius: 7px; text-align: left; scroll-snap-align: start; scroll-margin-inline-start: 20px; background: #456668; }
+.featured-card:first-child { margin-left: 20px; }
+.featured-card:last-child { margin-right: 20px; }
+@media (max-width: 849px) {
+  /* 172px card + 20px inset, so the last card can snap to the same left line. */
+  .featured-scroll::after { content: ''; flex: 0 0 calc(100% - 192px); }
+}
 .featured-card img, .featured-shade { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .featured-shade { background: linear-gradient(0deg, rgba(9,27,29,.83), rgba(9,27,29,.08) 75%); }
 .featured-card strong, .featured-card span { position: relative; z-index: 1; }
@@ -321,7 +327,7 @@ h1,h2,h3,p { margin-top: 0; }
   .app-main { width: 100%; max-width: none; padding-bottom: 30px; }
   .feed-header { height: 92px; padding-left: 30px; padding-right: 30px; }
   .feed-section { max-width: 900px; }
-  .page-feed .search-field, .page-feed .feed-pills, .page-feed .featured-scroll, .page-feed .section-head, .page-feed .feed-post { margin-left: 10px; margin-right: 10px; }
+  .page-feed .search-field, .page-feed .feed-pills, .page-feed .featured-scroll, .page-feed .section-head, .page-feed .feed-date-filter, .page-feed .feed-post { margin-left: 10px; margin-right: 10px; }
   .page-feed .search-field.fake-input { width: calc(100% - 60px); }
   .page-feed .post-image img { height: 330px; }
   .list-content.map-mode { height: calc(100dvh - 53px - 35px - 41px - 48px - 44px); min-height: 560px; }
@@ -473,11 +479,13 @@ h1,h2,h3,p { margin-top: 0; }
 .rank-photo .carousel-dots, .rank-photo .carousel-count, .rank-photo .carousel-arrow { display: none; }
 .rank-photo .visit-photo-status { font-size: 9px; }
 .feed-date-filter { padding: 0 0 18px; border-bottom: 1px solid var(--line,#e4eae7); margin-bottom: 18px; }
-.feed-date-form { display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin-top:14px; }
-.feed-date-form label { display:flex; flex-direction:column; gap:6px; font-size:12px; }
-.feed-date-form input { min-height:40px; border:1px solid #dce5e2; border-radius:6px; padding:7px; color:var(--ink); background:white; }
-.feed-date-form button { min-height:40px; padding:8px 14px; border-radius:6px; }
-.feed-date-form [role=alert] { width:100%; color:#a33939; }
-.feed-date-summary { display:flex; align-items:center; gap:12px; margin-top:12px; color:#6b7d79; font-size:12px; }
-.feed-date-summary button { color:var(--teal); text-decoration:underline; }
-@media(max-width:480px) { .feed-date-form label { flex:1; min-width:120px; } .feed-date-form input { width:100%; min-width:0; } }
+.feed-date-filter .filter-chips { height: auto; min-height: 40px; padding: 2px 20px 0; }
+.feed-date-sheet { margin-bottom: 0; }
+.feed-date-sheet .sheet-actions { bottom: 0; margin-bottom: 0; padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+.feed-date-fields { display: grid; gap: 12px; }
+.feed-date-fields label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 700; }
+.feed-date-fields input { min-height: 40px; width: 100%; border: 1px solid #dce5e2; border-radius: 6px; padding: 7px; color: var(--ink); background: white; font: inherit; }
+.feed-date-fields [role=alert] { margin: 0; color: #a33939; font-size: 12px; font-weight: 400; }
+.feed-date-summary { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 0 20px; color: #6b7d79; font-size: 12px; }
+.feed-date-summary button { border: 0; background: none; padding: 0; color: var(--teal); text-decoration: underline; }
+.feed-date-filter > .subtle { margin: 8px 0 0; padding: 0 20px; }
