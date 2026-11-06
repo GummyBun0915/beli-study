@@ -4,6 +4,9 @@
 
 ## 当前结论
 
+- **当前产品方向已改为个人云端 App**：移除身份选择、二人空间及邀请入口。原 WXY 密码作为初始私人访问码，保持 Supabase 会话与跨设备同步。只拉取本人记录和目录；旧 LHJ 会话无法进入产品。`20261106_personal_access.sql` 已在 GummyBun 浏览器 / GummyBun0915 项目控制台执行，返回函数定义确认个人身份限制；create/join/invite RPC 已撤销给 authenticated 的执行权限。未删除账号、记录或照片。
+- Feed 时间筛选覆盖全部、今年、本月、自定义区间；错误范围保留原结果，空态可清除，月份区间与未知日期语义均有测试。新的 tests/personal-access.mjs、feed-date-ui.mjs、feed-dates.mjs 是当前个人入口/日期验收；旧双账号测试属于历史规格，不再用于当前产品验收。
+
 - 2026-11-06 最新修复：历史归属/评分、历史编辑、上传照片缩略图和定位搜索已实现；本地 check、data:verify、build、tests/history-regression.mjs 通过。检索目录可见不等于 LHJ 去过。新回归覆盖 75 家 Been、21 条精确匹配评分、Been 幂等、历史编辑不新增、LHJ 基线修复与定位权限入口。
 
 - 用餐照片已移出登录与记录加载门禁。Feed、餐厅详情、共享空间记录可先显示文字；照片各自加载，失败可单独重试。已有云端照片不再因本机缺少缓存而阻止保存其他变更，新照片仍先上传再保存。照片失败夹具由 `npm run test:photos` 运行。

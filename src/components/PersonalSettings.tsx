@@ -1,0 +1,8 @@
+import {useState} from 'react';
+import type {SharingController} from '../state/useSharing';
+import type {FoodSnapshot} from '../state/useFoodState';
+export function PersonalSettings({sharing,snapshot}:{sharing:SharingController;snapshot:FoodSnapshot}) {
+ const [code,setCode]=useState('');const [message,setMessage]=useState('');const [busy,setBusy]=useState(false);
+ const download=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='dining-journal-records.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+ return <section className="sharing-panel" aria-label="个人云端资料库"><h2>我的资料库</h2><p role="status">{sharing.error||sharing.status||'已连接云端'}</p>{sharing.error&&<button onClick={()=>void sharing.reloadCloud()}>重新载入云端</button>}<p className="subtle">记录和照片在已解锁的设备间同步。</p><button className="sharing-outline full" onClick={download}>导出记录备份</button><p className="subtle">备份包含记录和照片引用，照片原文件仍保存在云端。</p><details><summary>更换私人访问码</summary><form onSubmit={async e=>{e.preventDefault();setBusy(true);try{await sharing.changePassword(code);setCode('');setMessage('访问码已更新');}catch{setMessage('更换未完成，请重试');}finally{setBusy(false);}}}><label>新访问码<input aria-label="新访问码" type="password" autoComplete="new-password" value={code} minLength={12} required onChange={e=>setCode(e.target.value)}/></label><button disabled={busy} className="primary">{busy?'正在保存…':'保存访问码'}</button></form></details>{message&&<p role="status">{message}</p>}<button className="text-button" onClick={()=>void sharing.signOut()}>锁定此设备</button></section>;
+}

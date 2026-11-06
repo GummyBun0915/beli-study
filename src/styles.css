@@ -472,3 +472,12 @@ h1,h2,h3,p { margin-top: 0; }
 .rank-photo .feed-gallery .photo-slide { height: 56px; }
 .rank-photo .carousel-dots, .rank-photo .carousel-count, .rank-photo .carousel-arrow { display: none; }
 .rank-photo .visit-photo-status { font-size: 9px; }
+.feed-date-filter { padding: 0 0 18px; border-bottom: 1px solid var(--line,#e4eae7); margin-bottom: 18px; }
+.feed-date-form { display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin-top:14px; }
+.feed-date-form label { display:flex; flex-direction:column; gap:6px; font-size:12px; }
+.feed-date-form input { min-height:40px; border:1px solid #dce5e2; border-radius:6px; padding:7px; color:var(--ink); background:white; }
+.feed-date-form button { min-height:40px; padding:8px 14px; border-radius:6px; }
+.feed-date-form [role=alert] { width:100%; color:#a33939; }
+.feed-date-summary { display:flex; align-items:center; gap:12px; margin-top:12px; color:#6b7d79; font-size:12px; }
+.feed-date-summary button { color:var(--teal); text-decoration:underline; }
+@media(max-width:480px) { .feed-date-form label { flex:1; min-width:120px; } .feed-date-form input { width:100%; min-width:0; } }

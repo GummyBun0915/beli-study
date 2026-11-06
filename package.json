@@ -9,13 +9,16 @@
     "preview": "vite preview --host 127.0.0.1",
     "check": "tsc --noEmit",
     "data:sync": "node scripts/sync-source.mjs",
-    "data:check": "node scripts/sync-source.mjs /Users/jiguang/Desktop/Personal/01_个人项目/dachitech --check",
+    "data:check": "node scripts/sync-source.mjs /Users/jiguang/Desktop/Personal/01_\u4e2a\u4eba\u9879\u76ee/dachitech --check",
     "test:ui": "node tests/ui.mjs",
     "data:verify": "node scripts/verify-import.mjs",
     "test:auth": "node tests/auth-gate.mjs",
     "test:feed": "node tests/shared-feed.mjs",
     "test:amap": "node tests/amap-place.mjs",
-    "test:photos": "node tests/photo-retry.mjs"
+    "test:photos": "node tests/photo-retry.mjs",
+    "test:personal": "node tests/personal-access.mjs",
+    "test:dates": "node tests/feed-dates.mjs && node tests/feed-date-ui.mjs",
+    "test:history": "node tests/history-regression.mjs"
   },
   "dependencies": {
     "@maplibre/maplibre-gl-leaflet": "^0.1.4",

@@ -22,7 +22,7 @@ export async function mockSharing(page,{loggedIn=true,preferLocalSnapshot=false,
     const url=new URL(route.request().url());const table=url.pathname.split('/').at(-1);
     if(delayMs)await new Promise(resolve=>setTimeout(resolve,delayMs));
     let result;
-    if(table==='beli_members')result=url.searchParams.has('user_id')?{space_id:room}:Object.entries(users).map(([name,id])=>({user_id:id,display_name:name,avatar_letter:name[0],avatar_color:'#286ad7'}));
+    if(table==='beli_members')result=url.searchParams.get('select')==='space_id'?{space_id:room}:Object.entries(users).map(([name,id])=>({user_id:id,display_name:name,avatar_letter:name[0],avatar_color:'#286ad7'}));
     else if(table==='beli_spaces')result={id:room,name:'Our dining list',owner_id:users.WXY};
     else if(table==='beli_states'){
       if(preferLocalSnapshot){const value=await page.evaluate(()=>localStorage.getItem('beli-dachitech:food-state:v2'));if(value)states[identity]=JSON.parse(value);}

@@ -25,7 +25,7 @@ export function sharedFeed(members: Member[], states: SharedState[], ownId: stri
     });
     // Only the snapshot that owns the original history may publish its notes/photos.
     // Being marked Been in another person's list does not copy that history to them.
-    const history: FeedPost[] = state.baseline === 'source' ? restaurants.filter(restaurant => restaurant.status === 'been').map(restaurant => ({ id: `${author.user_id}:history:${restaurant.id}`, author, restaurant, kind: 'history', sortDate: restaurant.visitedAt || '', score: scores.get(restaurant.id) ?? null })) : [];
+    const history: FeedPost[] = state.baseline === 'source' ? restaurants.filter(restaurant => !restaurant.place).map(restaurant => ({ id: `${author.user_id}:history:${restaurant.id}`, author, restaurant, kind: 'history', log: state.logs[restaurant.id], sortDate: state.logs[restaurant.id]?.visitedAt || restaurant.visitedAt || '', score: scores.get(restaurant.id) ?? null })) : [];
     const historyIds=new Set(history.map(post=>post.restaurant.id));
     const marked:FeedPost[]=restaurants.filter(restaurant=>statusFromSnapshot(state,restaurant)==='been'&&!state.visits[restaurant.id]?.length&&!historyIds.has(restaurant.id)).map(restaurant=>({id:`${author.user_id}:status:${restaurant.id}`,author,restaurant,kind:'status',log:state.logs[restaurant.id],sortDate:state.logs[restaurant.id]?.visitedAt||'',score:scores.get(restaurant.id)??null}));
     return [...visits, ...history, ...marked];

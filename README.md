@@ -1,6 +1,6 @@
 # Beli Study
 
-移动优先的美食记录 Web App，包含二人共同 Feed、多图浏览、餐厅列表/地图、搜索、重复用餐记录、个人比较排名和资料页。个人学习研究项目，非 Beli 官方服务。
+移动优先的个人美食记录 Web App，包含个人 Feed 与时间筛选、多图浏览、餐厅列表/地图、搜索、重复用餐记录、个人比较排名和资料页。个人学习研究项目，非 Beli 官方服务。
 
 ## 启动
 
@@ -18,9 +18,9 @@ npm run dev
 
 ```sh
 npm run check
-npm run test:ui
-npm run test:auth
-npm run test:feed
+npm run test:personal
+npm run test:dates
+npm run test:history
 npm run build
 npm run preview
 ```
@@ -31,7 +31,8 @@ npm run preview
 
 - 从只读 `dachitech` 公开投影复制 75 家餐厅与 172 个被引用图片资产，餐厅和照片数据保留原样。36 家有坐标，缺位置的店继续显示在列表中。
 - 新记录、排名和状态默认保存在当前浏览器。新增照片保存在 IndexedDB。
-- 已上线：<https://gummybun0915.github.io/beli-study/>（GitHub Pages，push main 自动部署）。前端已接入 Supabase（beli-private），打开网页先选择 WXY / LHJ 并输入密码，登录状态会保留；Profile 用于共享管理及退出登录；**两账号真实登录、独立浏览器共享、权限与账号切换已通过验证**，报告和剩余边界见 [HANDOFF](HANDOFF.md)。
+- 已上线：<https://gummybun0915.github.io/beli-study/>。一个个人云端资料库，首次输入私人访问码后记住设备。初始访问码沿用原 WXY 的密码；Profile 可更换访问码或锁定本设备。Supabase 仍在后台验证凭证并保护数据，不显示账号选择或二人空间。历史 LHJ 数据保留归档，成员访问规则仅允许个人拥有者。
+- Feed 支持全部时间、今年、本月、自定义日期；按用餐日期筛选，月份精度按整月区间匹配；未填日期仅在全部时间显示。
 - 2026 商店图与 2026-09 实际操作分析用于界面研究；详情页和部分状态没有同一 build 的原始实屏，尚不能声称完整像素级一致。
 - 头像偏好：WXY、蓝底白色 W。产品界面不展示数据工程来源或上游评级体系。
 

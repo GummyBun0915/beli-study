@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {dateMatches,visitInterval} from '../src/state/feedDates.ts';
+assert.deepEqual(visitInterval('2024-02'),['2024-02-01','2024-02-29']);
+assert(dateMatches('2026-05','2026-05-20','2026-05-30'));
+assert(!dateMatches('2026-04-30','2026-05-01','2026-05-31'));
+assert(dateMatches('2026-05-31','2026-05-01','2026-05-31'));
+assert(!dateMatches('','2026-01-01','2026-12-31'));
+assert(dateMatches('','',''));
+assert(dateMatches('2026.05','','2026-05-15'));
+console.log('PASS: month precision, leap month, inclusive bounds, unknown dates, open intervals');

@@ -68,14 +68,16 @@ export function useSharing(food: FoodStateController) {
   const refresh=useCallback(async(sid:string)=>{
     if(!client)return;
     const results=await Promise.all([
-      client.from('beli_members').select('user_id,display_name,avatar_letter,avatar_color').eq('space_id',sid),
-      client.from('beli_states').select('user_id,payload,revision').eq('space_id',sid),
+      client.from('beli_members').select('user_id,display_name,avatar_letter,avatar_color').eq('space_id',sid).eq('user_id',authIdentity.current!),
+      client.from('beli_states').select('user_id,payload,revision').eq('space_id',sid).eq('user_id',authIdentity.current!),
       client.from('beli_wants').select('restaurant_id,added_by').eq('space_id',sid),
     ]);
     for(const result of results)if(result.error)throw result.error;
     const session=(await client.auth.getSession()).data.session;
-    const cleanRows=((results[1].data||[]) as unknown as SharedState[]).map(row=>({...row,payload:normalizeSnapshot({...row.payload,baseline:(row.user_id===session?.user.id ? identityForEmail(session?.user.email)?.name==='WXY' : identityForEmail(session?.user.email)?.name==='LHJ')?'source':'empty'},new Set(restaurants.map(r=>r.id)))}));
-    setMembers((results[0].data||[]) as unknown as Member[]);setStates(cleanRows);setWants((results[2].data||[]) as unknown as SharedWant[]);
+    const cleanRows=((results[1].data||[]) as unknown as SharedState[]).filter(row=>row.user_id===authIdentity.current).map(row=>({...row,payload:normalizeSnapshot({...row.payload,baseline:(row.user_id===session?.user.id ? identityForEmail(session?.user.email)?.name==='WXY' : identityForEmail(session?.user.email)?.name==='LHJ')?'source':'empty'},new Set(restaurants.map(r=>r.id)))}));
+    const remote=cleanRows.find(row=>row.user_id===authIdentity.current);
+    if(remote&&remote.revision>revision.current&&JSON.stringify(foodRef.current.snapshot)===lastSynced.current){revision.current=remote.revision;lastSynced.current=JSON.stringify(remote.payload);foodRef.current.restore(remote.payload);}
+    setMembers(((results[0].data||[]) as unknown as Member[]).filter(member=>member.user_id===authIdentity.current));setStates(cleanRows);setWants((results[2].data||[]) as unknown as SharedWant[]);
     return cleanRows;
   },[]);
   const loadSpace=useCallback(async(uid:string)=>{
@@ -108,11 +110,11 @@ export function useSharing(food: FoodStateController) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[refresh,restore]);
   useEffect(()=>{
-    const hash=decodeURIComponent(location.hash);if(hash.startsWith('#/join/')){const token=hash.slice(7);sessionStorage.setItem('beli-invite',token);setInvite(token);location.hash='/profile';}
+    if(location.hash.startsWith('#/join/'))location.hash='/feed';
     if(!client){setAuthReady(true);return;}
     let cancelled=false;
     const applySession=(session:{user:{id:string;email?:string}}|null)=>{
-      if(cancelled)return;const uid=session?.user.id||null;
+      if(cancelled)return;const uid=identityForEmail(session?.user.email)?.name==='WXY'?session?.user.id||null:null;
       if(authIdentity.current!==uid){authIdentity.current=uid;identityEpoch.current++;setLoadedUserId(null);setReady(false);}
       setUserId(uid);setAccountName(identityForEmail(session?.user.email)?.name||'');setAuthReady(true);
     };
@@ -146,7 +148,7 @@ export function useSharing(food: FoodStateController) {
       catch(err){const message=err instanceof Error?err.message:String((err as {message?:string})?.message||'同步失败');if(message.includes('SYNC_CONFLICT')){conflict.current=true;setReady(false);setError('另一台设备已有更新，请先载入云端记录。');}else setError(message);setStatus('同步未完成');}
     });},700);return()=>clearTimeout(timer);
   },[food.snapshot,space,userId,ready,tick,uploadNewPhotos,refresh]);
-  const signIn=async(name:IdentityName,password:string)=>{if(!client)throw new Error('暂时无法连接，请稍后重试');setError('');const identity=identities.find(item=>item.name===name);if(!identity)throw new Error('请选择身份');const {error}=await client.auth.signInWithPassword({email:identity.email,password});if(error)throw new Error((error.code==='invalid_credentials'||/invalid login credentials/i.test(error.message))?'密码不正确，请重试':'暂时无法登录，请稍后重试');};
+  const signIn=async(_name:IdentityName,password:string)=>{if(!client)throw new Error('暂时无法连接，请稍后重试');setError('');const identity=identities.find(item=>item.name==='WXY');if(!identity)throw new Error('暂时无法连接');const {error}=await client.auth.signInWithPassword({email:identity.email,password});if(error)throw new Error((error.code==='invalid_credentials'||/invalid login credentials/i.test(error.message))?'访问码不正确，请重试':'暂时无法登录，请稍后重试');};
   const changePassword=async(password:string)=>{if(!client)return;const {error}=await client.auth.updateUser({password});if(error)throw error;};
   const updateName=async(name:string)=>{if(!client||!space)return;const {error}=await client.rpc('beli_update_name',{member_name:name});if(error)throw error;await refresh(space.id);};
   const sendLink=async(email:string)=>{if(!client)return;const {error}=await client.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+import.meta.env.BASE_URL}});if(error)throw error;setStatus('登录链接已发送，请查收邮件');};
