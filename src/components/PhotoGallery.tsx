@@ -10,7 +10,7 @@ interface GalleryProps {
 }
 
 /** Native horizontal scrolling preserves touch momentum and works without gesture emulation. */
-export function PhotoCarousel({ images, label, onOpen, className = '' }: GalleryProps) {
+export function PhotoCarousel({ images, label, onOpen, className = '', lazy = false }: GalleryProps & { lazy?: boolean }) {
   const track = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   const moveTo = (next: number) => track.current?.scrollTo({ left: next * track.current.clientWidth, behavior: 'smooth' });
@@ -20,7 +20,7 @@ export function PhotoCarousel({ images, label, onOpen, className = '' }: Gallery
       setIndex(Math.round(el.scrollLeft / el.clientWidth));
     }}>
       {images.map((photo, i) => <button className="photo-slide" key={photo.src} onClick={() => onOpen(i)} aria-label={`放大 ${label} 照片 ${i + 1}/${images.length}`}>
-        <img src={imageUrl(photo.src)} alt={`${label} 实拍 ${i + 1}`} loading={i ? 'lazy' : 'eager'} draggable={false} style={{ objectPosition: photo.pos }} />
+        <img src={imageUrl(photo.src)} alt={`${label} 实拍 ${i + 1}`} loading={lazy || i > 0 ? 'lazy' : 'eager'} draggable={false} style={{ objectPosition: photo.pos }} />
       </button>)}
     </div>
     {images.length > 1 && <>

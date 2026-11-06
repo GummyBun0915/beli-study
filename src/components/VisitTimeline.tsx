@@ -20,9 +20,22 @@ function VisitPhotos({ ids, label, ownerId, loadPhoto }: {
 }) {
   const [photos, setPhotos] = useState<Record<string, PublishedImage | 'loading' | 'failed'>>({});
   const [viewer, setViewer] = useState<{ images: PublishedImage[]; index: number } | null>(null);
+  const [active, setActive] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const start = useRef<(id: string, retry: boolean) => void>(() => {});
   const [photoIds] = useState(ids);
   useEffect(() => {
+    const node = rootRef.current;
+    if (!node || active) return;
+    if (typeof IntersectionObserver !== 'function') { setActive(true); return; }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) { setActive(true); observer.disconnect(); }
+    }, { rootMargin: '240px 0px', threshold: 0 });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [active]);
+  useEffect(() => {
+    if (!active) return;
     const controller = new AbortController();
     const urls = new Set<string>();
     start.current = (id, retry) => {
@@ -52,20 +65,20 @@ function VisitPhotos({ ids, label, ownerId, loadPhoto }: {
       controller.abort();
       urls.forEach(URL.revokeObjectURL);
     };
-  }, [photoIds, ownerId, loadPhoto]);
+  }, [active, photoIds, ownerId, loadPhoto]);
 
   const images = photoIds.flatMap(id => {
     const photo = photos[id];
     return typeof photo === 'object' ? [photo] : [];
   });
-  return <>
-    {images.length > 0 && <PhotoCarousel className="feed-gallery" images={images} label={label} onOpen={index => setViewer({ images, index })}/>}
-    {photoIds.map((id, index) => typeof photos[id] !== 'object' && <div className="visit-photo-status" key={id}>
+  return <div ref={rootRef} className="visit-photos">
+    {active && images.length > 0 && <PhotoCarousel className="feed-gallery" images={images} label={label} onOpen={index => setViewer({ images, index })}/>}
+    {active && photoIds.map((id, index) => typeof photos[id] !== 'object' && <div className="visit-photo-status" key={id}>
       <span role="status">照片 {index + 1}{photos[id] === 'failed' ? '加载失败' : '正在加载…'}</span>
       {photos[id] === 'failed' && <button type="button" onClick={() => start.current(id, true)}>重试照片 {index + 1}</button>}
     </div>)}
     {viewer && <PhotoViewer images={viewer.images} label={label} initialIndex={viewer.index} onClose={() => setViewer(null)}/>}
-  </>;
+  </div>;
 }
 
 export function VisitTimeline({ visits, name, ownerId, loadPhoto }: {
