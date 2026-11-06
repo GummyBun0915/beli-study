@@ -23,7 +23,6 @@ try{
   let sdkAttempts=0;
   await a.route('https://webapi.amap.com/**',route=>route.fulfill({contentType:'application/javascript',body:++sdkAttempts===1?'/* SDK failed to initialise */':stub}));
   await a.goto(base+'#/search');await a.getByPlaceholder('店名、菜系、菜品、地区').fill('测试夹具');
-  await a.getByText('没找到？在高德搜索',{exact:false}).click();
   await a.getByText('高德搜索组件未载入，请重试',{exact:false}).waitFor();
   await a.getByRole('button',{name:'重试',exact:true}).click();
   await a.locator('.place-row').filter({hasText:poi.name}).waitFor();
@@ -39,7 +38,7 @@ try{
   await a.reload();await a.getByRole('heading',{name:poi.name,exact:true}).waitFor();
   await a.goto(base+'#/search');await a.getByPlaceholder('店名、菜系、菜品、地区').fill('测试夹具');
   await a.locator('.search-row').filter({hasText:poi.name}).waitFor();
-  await a.getByText('没找到？在高德搜索',{exact:false}).click();await a.getByRole('button',{name:'已添加 · 查看',exact:false}).waitFor();
+  assert.equal(await a.locator('.place-row').filter({hasText:poi.name}).count(),0,'a restaurant already in the local list should not be duplicated in provider results');
   const wxySnapshot=await a.evaluate(k=>JSON.parse(localStorage.getItem(k)),stateKey);
   await a.screenshot({path:'qa/amap-search-mobile.png'});await a.close();
 
@@ -59,7 +58,6 @@ try{
   await c.route('https://photon.komoot.io/**',route=>{const url=new URL(route.request().url());c.__photon=url;route.fulfill({json:{features:[{geometry:{coordinates:[126.97,37.56]},properties:{osm_type:'N',osm_id:1,name:'一蘭 首尔',osm_value:'restaurant',city:'Seoul',countrycode:'KR'}},{geometry:{coordinates:[139.7009878,35.6611293]},properties:{osm_type:'N',osm_id:3047251663,name:'一蘭 渋谷店',osm_value:'restaurant',city:'渋谷区',street:'神南',housenumber:'1-22-7',countrycode:'JP'}}]}});});
   await c.goto(base+'#/search');await c.getByPlaceholder('店名、菜系、菜品、地区').fill('ichiran');
   await c.locator('.city-scroll button',{hasText:'日本'}).click();
-  await c.getByText('没找到？在OpenStreetMap搜索',{exact:false}).click();
   await c.locator('.place-row').filter({hasText:'一蘭 渋谷店'}).waitFor();
   assert.equal(c.__photon.searchParams.get('q'),'ichiran');assert(c.__photon.searchParams.getAll('osm_tag').includes('amenity:restaurant'));assert.equal(c.__photon.searchParams.get('limit'),'30','country filter widens the request');
   await c.getByText('OpenStreetMap 贡献者',{exact:false}).waitFor();assert.equal(await c.locator('.place-row').filter({hasText:'一蘭 首尔'}).count(),0,'other countries filtered out');
@@ -89,6 +87,6 @@ try{
   await d.goto(base+(/^(localhost|127\.0\.0\.1|\[::1\])$/.test(new URL(base).hostname)?'':'?map=osm')+'#/lists');await d.getByRole('button',{name:'Map',exact:true}).click();await d.locator('.beli-map[data-basemap="osm"]').waitFor();
   await d.close();
   assert.deepEqual(errors,[]);
-  const report={testedAt:new Date().toISOString(),base,fixture:true,passed:['AMap search runs only on demand, restaurant category, nationwide when no city','added place opens its detail page with no status','place and status persist in own snapshot across reload','added place appears in local search and is marked as added','partner sees place in shared feed without it being copied','acting on partner place copies the place but not the ranking','overseas OpenStreetMap search filtered to the region country, credited, mapped to JP region','manual add without coordinates, explicit country retained and region filter finds it','AMap SDK initialization failure recovers on retry','AMap basemap with GCJ-02 pins and explicit center; OSM fallback/override'],errors};
+  const report={testedAt:new Date().toISOString(),base,fixture:true,passed:['typing a query automatically searches AMap after debounce; restaurant category, nationwide when no city','added place opens its detail page with no status','place and status persist in own snapshot across reload','added place appears in local search and is marked as added','partner sees place in shared feed without it being copied','acting on partner place copies the place but not the ranking','overseas OpenStreetMap search automatically filters to the region country, credited, mapped to JP region','manual add without coordinates, explicit country retained and region filter finds it','AMap SDK initialization failure recovers on retry','AMap basemap with GCJ-02 pins and explicit center; OSM fallback/override'],errors};
   fs.writeFileSync('qa/amap-place-report.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
 }finally{await browser.close();}

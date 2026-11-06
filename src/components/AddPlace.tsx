@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { ArrowRight, ChevronRight, CirclePlus, MapPin } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { CirclePlus } from 'lucide-react';
 import { isOverseasRegion, regionCountry, regionName, type PlaceRecord, type Restaurant } from '../data/restaurants';
 import { amapConfigured, searchPlaces } from '../lib/amap';
 import { searchOsmPlaces } from '../lib/osm';
@@ -8,13 +8,14 @@ type Provider = 'amap' | 'osm';
 const providerLabel: Record<Provider, string> = { amap: '高德', osm: 'OpenStreetMap' };
 
 /** Adds restaurants that are not in the catalogue: AMap for mainland China, OpenStreetMap abroad, or typed in. */
-export function AddPlace({ query, searchCity, catalog, onAdd, onOpen }: { query: string; searchCity: string; catalog: Restaurant[]; onAdd: (place: PlaceRecord) => void; onOpen: (restaurant: Restaurant) => void }) {
+export function AddPlace({ query, searchCity, catalog, onAdd }: { query: string; searchCity: string; catalog: Restaurant[]; onAdd: (place: PlaceRecord) => void }) {
   const keyword = query.trim();
   const overseas = isOverseasRegion(searchCity);
   const primary: Provider = overseas || !amapConfigured ? 'osm' : 'amap';
   const alternate: Provider | null = primary === 'amap' ? 'osm' : amapConfigured && searchCity === 'all' ? 'amap' : null;
   const scope = searchCity === 'all' ? '不限地区' : regionName(searchCity);
   const known = useMemo(() => new Map(catalog.map(r => [r.id, r])), [catalog]);
+  const knownNames = useMemo(() => new Set(catalog.map(r => `${normalizeName(r.displayName)}|${normalizeName(r.actualCity)}`)), [catalog]);
   // OSM ranking bias: the centre of the catalogue's restaurants in the chosen region.
   const near = useMemo(() => {
     const points = catalog.filter(r => r.regionSlug === searchCity && r.mapLng !== null && r.mapLat !== null);
@@ -23,16 +24,33 @@ export function AddPlace({ query, searchCity, catalog, onAdd, onOpen }: { query:
   const searchKey = `${searchCity}|${keyword}`;
   const [found, setFound] = useState<{ key: string; provider: Provider; loading: boolean; results: PlaceRecord[]; error: string } | null>(null);
   const [manual, setManual] = useState<{ name: string; city: string; address: string; country: string } | null>(null);
+  const requestId = useRef(0);
 
   const run = (provider: Provider) => {
     if (!keyword) return;
     const key = searchKey;
+    const id = ++requestId.current;
     setFound({ key, provider, loading: true, results: [], error: '' });
     const request = provider === 'amap' ? searchPlaces(keyword, searchCity === 'all' ? undefined : regionName(searchCity)) : searchOsmPlaces(keyword, near, regionCountry(searchCity));
     request
-      .then(results => setFound(current => current?.key === key && current.provider === provider ? { ...current, loading: false, results } : current))
-      .catch((error: unknown) => setFound(current => current?.key === key && current.provider === provider ? { ...current, loading: false, error: error instanceof Error ? error.message : '搜索失败' } : current));
+      .then(results => { if (requestId.current === id) setFound(current => current?.key === key && current.provider === provider ? { ...current, loading: false, results } : current); })
+      .catch((error: unknown) => { if (requestId.current === id) setFound(current => current?.key === key && current.provider === provider ? { ...current, loading: false, error: error instanceof Error ? error.message : '搜索失败' } : current); });
   };
+
+  useEffect(() => {
+    const chars = Array.from(keyword).length;
+    const id = ++requestId.current;
+    if (!keyword) { setFound(null); return; }
+    if (chars < 2) { setFound({ key: searchKey, provider: primary, loading: false, results: [], error: '再输入一个字开始搜索' }); return; }
+    setFound({ key: searchKey, provider: primary, loading: true, results: [], error: '' });
+    const timer = window.setTimeout(() => {
+      const request = primary === 'amap' ? searchPlaces(keyword, searchCity === 'all' ? undefined : regionName(searchCity)) : searchOsmPlaces(keyword, near, regionCountry(searchCity));
+      request
+        .then(results => { if (requestId.current === id) setFound(current => current?.key === searchKey && current.provider === primary ? { ...current, loading: false, results } : current); })
+        .catch((error: unknown) => { if (requestId.current === id) setFound(current => current?.key === searchKey && current.provider === primary ? { ...current, loading: false, error: error instanceof Error ? error.message : '搜索失败' } : current); });
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [keyword, searchCity, primary, near, searchKey]);
   const addManual = () => {
     if (!manual?.name.trim() || !manual.city.trim()) return;
     onAdd({ id: `manual:${crypto.randomUUID().replaceAll('-', '').slice(0, 24)}`, source: 'manual', poiId: '', name: manual.name.trim().slice(0, 120),
@@ -41,22 +59,20 @@ export function AddPlace({ query, searchCity, catalog, onAdd, onOpen }: { query:
 
   if (!keyword) return null;
   const state = found?.key === searchKey ? found : null;
-  return <section className="add-place" aria-label="添加新餐厅">
-    {!state ? <button className="add-place-trigger" onClick={() => run(primary)}><MapPin size={16} /><span>没找到？在{providerLabel[primary]}搜索「{keyword}」<small>{scope} · 只搜餐饮</small></span><ChevronRight size={16} /></button>
-      : state.loading ? <p className="add-place-status">正在搜索{providerLabel[state.provider]}…</p>
+  return <section className="add-place" aria-label="餐厅搜索结果">
+    {!state ? <p className="add-place-status">输入店名，自动搜索{providerLabel[primary]} · {scope}</p>
+      : state.loading ? <p className="add-place-status">正在搜索{providerLabel[state.provider]} · {scope}…</p>
+      : state.error === '再输入一个字开始搜索' ? <p className="add-place-status">{state.error}</p>
       : state.error ? <p className="add-place-status error">{state.error} <button onClick={() => run(state.provider)}>重试</button></p>
-      : !state.results.length ? <p className="add-place-status">{providerLabel[state.provider]}也没有找到匹配的餐厅。</p>
+      : !state.results.some(place => !known.has(place.id) && !knownNames.has(`${normalizeName(place.name)}|${normalizeName(place.city)}`)) ? <p className="add-place-status">没有找到新的餐厅；已收录的匹配项显示在上方。</p>
       : <>
-        <div className="search-results-title"><strong>{providerLabel[state.provider]} · {state.results.length} 个结果</strong></div>
-        <div className="restaurant-list">{state.results.map(place => {
-          const existing = known.get(place.id);
-          return <article key={place.id} className="restaurant-row place-row"><div className="row-main"><span className="row-text"><strong>{place.name}</strong><span className="info-line">{[place.city.replace(/市$/, ''), place.district, place.type.split(';').at(-1)].filter(Boolean).join(' · ')}</span>{place.address && <small className="place-address">{place.address}</small>}</span></div>
-            <div className="row-actions">{existing ? <button onClick={() => onOpen(existing)}>已添加 · 查看 <ArrowRight size={15} /></button> : <button onClick={() => onAdd(place)}>添加这家 <CirclePlus size={15} /></button>}</div></article>;
-        })}</div>
+        <div className="search-results-title"><strong>{providerLabel[state.provider]} · {state.results.filter(place => !known.has(place.id) && !knownNames.has(`${normalizeName(place.name)}|${normalizeName(place.city)}`)).length} 个结果</strong></div>
+        <div className="restaurant-list">{state.results.filter(place => !known.has(place.id) && !knownNames.has(`${normalizeName(place.name)}|${normalizeName(place.city)}`)).map(place => <article key={place.id} className="restaurant-row place-row"><div className="row-main"><span className="row-text"><strong>{place.name}</strong><span className="info-line">{[place.city.replace(/市$/, ''), place.district, place.type.split(';').at(-1)].filter(Boolean).join(' · ')}</span>{place.address && <small className="place-address">{place.address}</small>}</span></div>
+            <div className="row-actions"><button onClick={() => onAdd(place)}>添加这家 <CirclePlus size={15} /></button></div></article>)}</div>
         {state.provider === 'osm' && <p className="place-credit">数据 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap 贡献者</a> · 搜索 Photon</p>}
       </>}
     <div className="add-place-links">
-      {alternate && <button onClick={() => run(alternate)}>{alternate === 'osm' ? '海外的店？改用 OpenStreetMap 搜' : '国内的店？改用高德搜'}</button>}
+      {alternate && <button onClick={() => run(alternate)}>{alternate === 'osm' ? '改用 OpenStreetMap 搜' : '改用高德搜索'}</button>}
       {!manual && <button onClick={() => setManual({ name: keyword, city: searchCity === 'all' ? '' : regionName(searchCity), address: '', country: regionCountry(searchCity) || (searchCity === 'all' ? '' : 'CN') })}>都搜不到？手动添加</button>}
     </div>
     {manual && <form className="add-place-form" onSubmit={event => { event.preventDefault(); addManual(); }}>
@@ -69,3 +85,5 @@ export function AddPlace({ query, searchCity, catalog, onAdd, onOpen }: { query:
     </form>}
   </section>;
 }
+
+function normalizeName(value: string) { return value.toLocaleLowerCase().replace(/[\s·・,，.。()（）\-—]/g, '').replace(/[市区县]$/, ''); }
