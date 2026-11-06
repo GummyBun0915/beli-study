@@ -10,10 +10,10 @@ const providerLabel: Record<Provider, string> = { amap: '高德', osm: 'OpenStre
 /** Adds restaurants that are not in the catalogue: AMap for mainland China, OpenStreetMap abroad, or typed in. */
 export function AddPlace({ query, searchCity, catalog, visibleIds, onAdd, onOpen, location }: { location?: {lng:number;lat:number}; query: string; searchCity: string; catalog: Restaurant[]; visibleIds: ReadonlySet<string>; onAdd: (place: PlaceRecord) => void; onOpen: (restaurant: Restaurant) => void }) {
   const keyword = query.trim();
-  const overseas = isOverseasRegion(searchCity);
+  const overseas = isOverseasRegion(searchCity) || (searchCity === 'all' && Boolean(location && (location.lng < 73 || location.lng > 135 || location.lat < 18 || location.lat > 54)));
   const primary: Provider = overseas || !amapConfigured ? 'osm' : 'amap';
   const alternate: Provider | null = primary === 'amap' ? 'osm' : amapConfigured && searchCity === 'all' ? 'amap' : null;
-  const scope = searchCity === 'all' ? '不限地区' : regionName(searchCity);
+  const scope = searchCity === 'all' ? location ? '当前位置附近' : '不限地区' : regionName(searchCity);
   const known = useMemo(() => new Map(catalog.map(r => [r.id, r])), [catalog]);
   const knownNames = useMemo(() => new Map(catalog.map(r => [`${normalizeName(r.displayName)}|${normalizeName(r.actualCity)}`, r])), [catalog]);
   const existingFor = (place: PlaceRecord) => known.get(place.id) || knownNames.get(`${normalizeName(place.name)}|${normalizeName(place.city)}`);
