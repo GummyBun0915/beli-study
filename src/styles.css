@@ -357,6 +357,7 @@ h1,h2,h3,p { margin-top: 0; }
 .ranking-metadata label { display: block; margin-bottom: 13px; font-size: 11px; font-weight: 700; }
 .ranking-metadata textarea, .ranking-metadata input:not([type=file]) { display: block; width: 100%; min-height: 36px; margin-top: 6px; padding: 8px 9px; border: 1px solid #dfe5e3; border-radius: 5px; background: #fafbfa; color: var(--ink); font-size: 12px; }
 .ranking-metadata textarea { min-height: 72px; resize: vertical; }
+.ranking-score-note { margin: -3px 0 12px; color: #84918d; font-size: 10px; line-height: 1.55; }
 .ranking-metadata .photo-upload { display: flex; align-items: center; gap: 7px; cursor: pointer; color: var(--teal); }
 .photo-upload input { max-width: 150px; font-size: 10px; font-weight: 400; }
 .logging-photos { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; }

@@ -16,20 +16,24 @@ fs.mkdirSync('qa',{recursive:true});
 const route=async hash=>{await page.goto(`${base}#/${hash}`);};
 const logVisit=async(r,note,rank=false)=>{
   await route(`restaurant/${r.id}`);
-  await page.getByRole('button',{name:'再去了一次',exact:true}).click();
+  await page.getByRole('button',{name:'记录用餐',exact:true}).click();
   await page.getByRole('button',{name:'I liked it!',exact:true}).click();
   await page.getByLabel('Notes',{exact:true}).fill(note);
   await page.getByLabel('分店',{exact:true}).fill('测试到访记录');
   await page.getByLabel('到访日期').fill('2026-10-20');
-  if(rank){await page.getByRole('button',{name:/下一步/}).click();if(await page.locator('.ranking-pair').count())await page.locator('.ranking-pair button').first().click();}
-  else await page.getByRole('button',{name:'仅保存这次用餐，保留现有排名'}).click();
+  if(rank){await page.getByRole('button',{name:/下一步|保存用餐/}).click();if(await page.locator('.ranking-pair').count())await page.locator('.ranking-pair button').first().click();}
+  else await page.getByRole('button',{name:/保存用餐/}).click();
   await page.getByRole('button',{name:'Done',exact:true}).click();
 };
 try{
   await logVisit(first,'第一次测试笔记');
+  assert.equal(await page.locator('.detail-score').count(),0,'a visit without a comparison must not receive an arbitrary score');
   await logVisit(first,'第二次测试笔记');
   assert.equal(await page.locator('.visit-timeline article').count(),2);
   assert.equal(await page.locator('.detail-score').count(),0);
+  await page.getByRole('button',{name:/还没排名/}).click();await page.getByRole('button',{name:'I liked it!',exact:true}).click();await page.getByRole('button',{name:/下一步/}).click();await page.getByRole('button',{name:'Done',exact:true}).click();
+  assert.equal(await page.locator('.detail-score').innerText(),'8.4','score appears only after explicitly adding the restaurant to the ranked list');
+  assert.equal(await page.getByRole('button',{name:'再去了一次',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'一起想去',exact:true}).count(),0);
   await logVisit(first,'第三次测试：更新排名',true);
   await logVisit(second,'比较另一家餐厅',true);
   await page.reload();
@@ -46,5 +50,5 @@ try{
   await route('lists');assert.equal(await page.locator('.row-tags').filter({hasText:/待定级|星选|星推介/}).count(),0);await page.screenshot({path:'qa/lists-mobile.png'});
   await page.getByRole('button',{name:'Map',exact:true}).click();await page.locator('.beli-map-pin').first().waitFor();assert.equal(await page.locator('.beli-map-pin').count(),24);await page.locator('.beli-map-pin').first().click({force:true});await page.locator('.map-preview').waitFor();
   await route('feed');await page.screenshot({path:'qa/feed-mobile.png'});const body=await page.locator('body').innerText();assert(!/星其林|dachitech|大吃特吃|来自.*真实/.test(body));const width=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:innerWidth}));assert(width.scroll<=width.viewport+1);assert.deepEqual(errors,[]);
-  const report={testedAt:new Date().toISOString(),passed:['multiple visits remain separate','rerank does not duplicate visits','one rank per restaurant','comparison ordering and reload persistence','multi-photo carousel and viewer','search','blue W / WXY','no source jargon in product','map selection','mobile width'],errors};fs.writeFileSync('qa/test-report.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
+  const report={testedAt:new Date().toISOString(),passed:['multiple visits remain separate','no score is generated without a comparison; explicit ranking creates the first score','rerank does not duplicate visits','one rank per restaurant','comparison ordering and reload persistence','removed custom repeat-visit/shared-wishlist detail actions','multi-photo carousel and viewer','search','blue W / WXY','no source jargon in product','map selection','mobile width'],errors};fs.writeFileSync('qa/test-report.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
 }finally{await browser.close();}

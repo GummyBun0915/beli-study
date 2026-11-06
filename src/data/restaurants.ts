@@ -172,6 +172,8 @@ export interface PlaceRecord {
   id: string;
   source: PlaceSource;
   poiId: string;
+  /** Search chip that scoped this place, retained when a provider returns a province rather than a city. */
+  regionSlug?: string;
   name: string;
   address: string;
   city: string;
@@ -222,7 +224,8 @@ export const restaurants: Restaurant[] = data.restaurants.map(normalize);
 /** Added places start as no-status for everyone. */
 export function placeToRestaurant(place: PlaceRecord): Restaurant {
   const city = place.city.replace(/市$/, '');
-  const region = regions.find(r => r.slug === regionByCountry[place.country])
+  const region = regions.find(r => r.slug === place.regionSlug)
+    ?? regions.find(r => r.slug === regionByCountry[place.country])
     ?? (city ? regions.find(r => city.startsWith(r.name) || r.name.startsWith(city)) : undefined);
   const kind = place.type.split(';').filter(Boolean).at(-1) || '';
   const address = [place.district, place.address].filter(Boolean).join(' ');

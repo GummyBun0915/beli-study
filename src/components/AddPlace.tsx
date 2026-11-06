@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CirclePlus } from 'lucide-react';
+import { ChevronRight, CirclePlus } from 'lucide-react';
 import { isOverseasRegion, regionCountry, regionName, type PlaceRecord, type Restaurant } from '../data/restaurants';
 import { amapConfigured, searchPlaces } from '../lib/amap';
 import { searchOsmPlaces } from '../lib/osm';
@@ -8,14 +8,15 @@ type Provider = 'amap' | 'osm';
 const providerLabel: Record<Provider, string> = { amap: '高德', osm: 'OpenStreetMap' };
 
 /** Adds restaurants that are not in the catalogue: AMap for mainland China, OpenStreetMap abroad, or typed in. */
-export function AddPlace({ query, searchCity, catalog, onAdd }: { query: string; searchCity: string; catalog: Restaurant[]; onAdd: (place: PlaceRecord) => void }) {
+export function AddPlace({ query, searchCity, catalog, visibleIds, onAdd, onOpen }: { query: string; searchCity: string; catalog: Restaurant[]; visibleIds: ReadonlySet<string>; onAdd: (place: PlaceRecord) => void; onOpen: (restaurant: Restaurant) => void }) {
   const keyword = query.trim();
   const overseas = isOverseasRegion(searchCity);
   const primary: Provider = overseas || !amapConfigured ? 'osm' : 'amap';
   const alternate: Provider | null = primary === 'amap' ? 'osm' : amapConfigured && searchCity === 'all' ? 'amap' : null;
   const scope = searchCity === 'all' ? '不限地区' : regionName(searchCity);
   const known = useMemo(() => new Map(catalog.map(r => [r.id, r])), [catalog]);
-  const knownNames = useMemo(() => new Set(catalog.map(r => `${normalizeName(r.displayName)}|${normalizeName(r.actualCity)}`)), [catalog]);
+  const knownNames = useMemo(() => new Map(catalog.map(r => [`${normalizeName(r.displayName)}|${normalizeName(r.actualCity)}`, r])), [catalog]);
+  const existingFor = (place: PlaceRecord) => known.get(place.id) || knownNames.get(`${normalizeName(place.name)}|${normalizeName(place.city)}`);
   // OSM ranking bias: the centre of the catalogue's restaurants in the chosen region.
   const near = useMemo(() => {
     const points = catalog.filter(r => r.regionSlug === searchCity && r.mapLng !== null && r.mapLat !== null);
@@ -64,11 +65,14 @@ export function AddPlace({ query, searchCity, catalog, onAdd }: { query: string;
       : state.loading ? <p className="add-place-status">正在搜索{providerLabel[state.provider]} · {scope}…</p>
       : state.error === '再输入一个字开始搜索' ? <p className="add-place-status">{state.error}</p>
       : state.error ? <p className="add-place-status error">{state.error} <button onClick={() => run(state.provider)}>重试</button></p>
-      : !state.results.some(place => !known.has(place.id) && !knownNames.has(`${normalizeName(place.name)}|${normalizeName(place.city)}`)) ? <p className="add-place-status">没有找到新的餐厅；已收录的匹配项显示在上方。</p>
+      : !state.results.some(place => { const existing = existingFor(place); return !existing || !visibleIds.has(existing.id); }) ? <p className="add-place-status">没有找到新的餐厅；已收录的匹配项显示在上方。</p>
       : <>
-        <div className="search-results-title"><strong>{providerLabel[state.provider]} · {state.results.filter(place => !known.has(place.id) && !knownNames.has(`${normalizeName(place.name)}|${normalizeName(place.city)}`)).length} 个结果</strong></div>
-        <div className="restaurant-list">{state.results.filter(place => !known.has(place.id) && !knownNames.has(`${normalizeName(place.name)}|${normalizeName(place.city)}`)).map(place => <article key={place.id} className="restaurant-row place-row"><div className="row-main"><span className="row-text"><strong>{place.name}</strong><span className="info-line">{[place.city.replace(/市$/, ''), place.district, place.type.split(';').at(-1)].filter(Boolean).join(' · ')}</span>{place.address && <small className="place-address">{place.address}</small>}</span></div>
-            <div className="row-actions"><button onClick={() => onAdd(place)}>添加这家 <CirclePlus size={15} /></button></div></article>)}</div>
+        <div className="search-results-title"><strong>{providerLabel[state.provider]} · {state.results.filter(place => { const existing = existingFor(place); return !existing || !visibleIds.has(existing.id); }).length} 个结果</strong></div>
+        <div className="restaurant-list">{state.results.filter(place => { const existing = existingFor(place); return !existing || !visibleIds.has(existing.id); }).map(place => {
+          const existing = existingFor(place);
+          return <article key={place.id} className="restaurant-row place-row"><div className="row-main"><span className="row-text"><strong>{place.name}</strong><span className="info-line">{[place.city.replace(/市$/, ''), place.district, place.type.split(';').at(-1)].filter(Boolean).join(' · ')}</span>{place.address && <small className="place-address">{place.address}</small>}</span></div>
+            <div className="row-actions">{existing ? <button onClick={() => onOpen(existing)}>已加入 · 查看 <ChevronRight size={15} /></button> : <button onClick={() => onAdd(searchCity === 'all' ? place : { ...place, regionSlug: searchCity })}>添加这家 <CirclePlus size={15} /></button>}</div></article>;
+        })}</div>
         {state.provider === 'osm' && <p className="place-credit">数据 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap 贡献者</a> · 搜索 Photon</p>}
       </>}
     <div className="add-place-links">

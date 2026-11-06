@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { isPlaceId, mergePlaces, type PlaceRecord, type Restaurant } from '../data/restaurants';
+import { isPlaceId, mergePlaces, regions, type PlaceRecord, type Restaurant } from '../data/restaurants';
 
 export type FoodStatus = 'been' | 'want' | 'none';
 export type Sentiment = 'liked' | 'fine' | 'disliked';
@@ -50,7 +50,7 @@ function cleanPlaces(input: unknown): Record<string, PlaceRecord> {
     if (!isPlaceId(id) || !value || typeof value.name !== 'string' || !value.name.trim()) continue;
     const lng = coord(value.lng), lat = coord(value.lat);
     const [source, poiId] = id.split(':') as [PlaceRecord['source'], string];
-    result[id] = { id, source, poiId, name: value.name.slice(0, 120), address: str(value.address, 300), city: str(value.city, 60),
+    result[id] = { id, source, poiId, regionSlug: typeof value.regionSlug === 'string' && regions.some(region => region.slug === value.regionSlug) ? value.regionSlug : undefined, name: value.name.slice(0, 120), address: str(value.address, 300), city: str(value.city, 60),
       district: str(value.district, 60), type: str(value.type, 120), country: str(value.country, 2).toUpperCase() || (source === 'amap' ? 'CN' : ''),
       lng: lat === null ? null : lng, lat: lng === null ? null : lat, addedAt: str(value.addedAt, 40) };
   }

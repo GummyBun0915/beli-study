@@ -1,10 +1,12 @@
 {
-  "testedAt": "2026-10-23T09:37:15.485Z",
+  "testedAt": "2026-11-06T07:03:29.558Z",
   "passed": [
     "multiple visits remain separate",
+    "no score is generated without a comparison; explicit ranking creates the first score",
     "rerank does not duplicate visits",
     "one rank per restaurant",
     "comparison ordering and reload persistence",
+    "removed custom repeat-visit/shared-wishlist detail actions",
     "multi-photo carousel and viewer",
     "search",
     "blue W / WXY",

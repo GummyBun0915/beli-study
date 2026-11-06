@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import {mockSharing} from './helpers/mock-sharing.mjs';
 // AMap is stubbed: localhost is outside the key's domain whitelist, and the test must not depend on live POI data.
 const base=process.env.TEST_URL||'http://127.0.0.1:4178/beli-study/';
-const poi={id:'B0FIXTURE01',name:'测试夹具餐厅',type:'餐饮服务;中餐厅;湖南菜(湘菜)',address:'测试路 1 号',cityname:'深圳市',adname:'宝安区',location:{lng:113.88,lat:22.57}};
+const poi={id:'B0FIXTURE01',name:'测试夹具餐厅',type:'餐饮服务;中餐厅;湖南菜(湘菜)',address:'测试路 1 号',cityname:'广东省',adname:'宝安区',location:{lng:113.88,lat:22.57}};
 const stub=`window.AMap={Map:function(el,o){window.__amapMap=o;var ms=[];this.add=function(m){ms.push(m);window.__amapMarkers=ms};this.remove=function(m){ms=ms.filter(function(x){return x!==m});window.__amapMarkers=ms};this.setBounds=function(){};this.setZoomAndCenter=function(){};this.getZoom=function(){return 12};this.setZoom=function(){};this.getBounds=function(){return{contains:function(){return true}}};this.panTo=function(){};this.destroy=function(){}},Marker:function(o){this.o=o;o.content.dataset.lng=o.position[0];o.content.dataset.lat=o.position[1];document.body.appendChild(o.content)},Pixel:function(x,y){this.x=x;this.y=y},Bounds:function(){},PlaceSearch:function(opts){this.search=function(keyword,cb){window.__amapCalls=(window.__amapCalls||[]).concat([{keyword:keyword,opts:opts}]);setTimeout(function(){cb('complete',{info:'OK',poiList:{pois:[${JSON.stringify(poi)}]}})},50)}}};`;
 const placeId=`amap:${poi.id}`;
 const stateKey='beli-dachitech:food-state:v2';
@@ -22,23 +22,26 @@ try{
   const a=await open('WXY',{LHJ:empty('empty')});
   let sdkAttempts=0;
   await a.route('https://webapi.amap.com/**',route=>route.fulfill({contentType:'application/javascript',body:++sdkAttempts===1?'/* SDK failed to initialise */':stub}));
-  await a.goto(base+'#/search');await a.getByPlaceholder('店名、菜系、菜品、地区').fill('测试夹具');
+  await a.goto(base+'#/search');await a.locator('.city-scroll button',{hasText:'深圳'}).click();await a.getByPlaceholder('店名、菜系、菜品、地区').fill('测试夹具');
   await a.getByText('高德搜索组件未载入，请重试',{exact:false}).waitFor();
   await a.getByRole('button',{name:'重试',exact:true}).click();
   await a.locator('.place-row').filter({hasText:poi.name}).waitFor();
   assert.equal(sdkAttempts,2,'failed SDK load must be retryable');
-  const call=(await a.evaluate(()=>window.__amapCalls))[0];assert.equal(call.keyword,'测试夹具');assert.equal(call.opts.type,'餐饮服务');assert.equal(call.opts.citylimit,false);
+  const call=(await a.evaluate(()=>window.__amapCalls))[0];assert.equal(call.keyword,'测试夹具');assert.equal(call.opts.type,'餐饮服务');assert.equal(call.opts.citylimit,true);assert.equal(call.opts.city,'深圳');
   await a.getByRole('button',{name:'添加这家',exact:false}).click();
   await a.getByRole('heading',{name:poi.name,exact:true}).waitFor();
   assert(decodeURIComponent(new URL(a.url()).hash).endsWith(placeId));
   assert.equal(await a.locator('.detail-actions button.active').count(),0,'a new place starts with no status');
   await a.getByRole('button',{name:'想去',exact:false}).first().click();
   let state=await a.evaluate(k=>JSON.parse(localStorage.getItem(k)),stateKey);
-  assert.equal(state.places[placeId].name,poi.name);assert.equal(state.places[placeId].city,'深圳市');assert.equal(state.statuses[placeId],'want');
+  assert.equal(state.places[placeId].name,poi.name);assert.equal(state.places[placeId].city,'广东省');assert.equal(state.places[placeId].regionSlug,'shenzhen');assert.equal(state.statuses[placeId],'want');
   await a.reload();await a.getByRole('heading',{name:poi.name,exact:true}).waitFor();
-  await a.goto(base+'#/search');await a.getByPlaceholder('店名、菜系、菜品、地区').fill('测试夹具');
+  await a.goto(base+'#/search');await a.locator('.city-scroll button',{hasText:'深圳'}).click();await a.getByPlaceholder('店名、菜系、菜品、地区').fill('测试夹具');
   await a.locator('.search-row').filter({hasText:poi.name}).waitFor();
   assert.equal(await a.locator('.place-row').filter({hasText:poi.name}).count(),0,'a restaurant already in the local list should not be duplicated in provider results');
+  await a.evaluate(k=>{const snapshot=JSON.parse(localStorage.getItem(k));delete snapshot.places['amap:B0FIXTURE01'].regionSlug;localStorage.setItem(k,JSON.stringify(snapshot));},stateKey);
+  await a.reload();await a.goto(base+'#/search');await a.locator('.city-scroll button',{hasText:'深圳'}).click();await a.getByPlaceholder('店名、菜系、菜品、地区').fill('测试夹具');
+  await a.locator('.place-row').filter({hasText:poi.name}).getByRole('button',{name:'已加入 · 查看',exact:false}).waitFor();
   const wxySnapshot=await a.evaluate(k=>JSON.parse(localStorage.getItem(k)),stateKey);
   await a.screenshot({path:'qa/amap-search-mobile.png'});await a.close();
 
@@ -87,6 +90,6 @@ try{
   await d.goto(base+(/^(localhost|127\.0\.0\.1|\[::1\])$/.test(new URL(base).hostname)?'':'?map=osm')+'#/lists');await d.getByRole('button',{name:'Map',exact:true}).click();await d.locator('.beli-map[data-basemap="osm"]').waitFor();
   await d.close();
   assert.deepEqual(errors,[]);
-  const report={testedAt:new Date().toISOString(),base,fixture:true,passed:['typing a query automatically searches AMap after debounce; restaurant category, nationwide when no city','added place opens its detail page with no status','place and status persist in own snapshot across reload','added place appears in local search and is marked as added','partner sees place in shared feed without it being copied','acting on partner place copies the place but not the ranking','overseas OpenStreetMap search automatically filters to the region country, credited, mapped to JP region','manual add without coordinates, explicit country retained and region filter finds it','AMap SDK initialization failure recovers on retry','AMap basemap with GCJ-02 pins and explicit center; OSM fallback/override'],errors};
+  const report={testedAt:new Date().toISOString(),base,fixture:true,passed:['typing automatically searches AMap for the selected city','new place keeps selected region when provider returns province-level city metadata','added Want to Try place remains visible after search and its status persists','legacy added place remains visible as an existing provider result when local city classification is missing','already-listed restaurants are not duplicated when they appear in local search','partner sees WXY place without inheriting the ranking','acting on partner place copies the place but not the ranking','overseas OpenStreetMap search automatically filters to the region country, credited, mapped to JP region','manual add without coordinates, explicit country retained and region filter finds it','AMap SDK initialization failure recovers on retry','AMap basemap with GCJ-02 pins and explicit center; OSM fallback/override'],errors};
   fs.writeFileSync('qa/amap-place-report.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
 }finally{await browser.close();}
