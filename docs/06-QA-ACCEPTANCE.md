@@ -57,3 +57,8 @@ WXY / LHJ 已加入同一空间。数据库与生产构建浏览器验收通过�
 验证：check、data:verify（75 餐厅/172 资产）、生产 base build、test:ui、test:auth、test:feed、test:amap 均通过。shared-feed-live.mjs 在正式 Pages 用 WXY/LHJ 真实登录，只读确认双方可见已有动态，个人快照/计数/榜单保持不变。实时双作者与同店不同评分由隔离夹具验证，不为线上账号伪造记录。
 
 边界：海外搜索依赖 Photon 公共服务可用性；手动店无坐标仍不在地图显示；历史未指定国家的手动店不自动推测国家。真机 Safari/Android 仍待用户验收。
+
+
+## 用餐照片独立加载
+
+先在本地运行 `npm run dev -- --port 5189 --strictPort`，再运行 `npm run test:photos`。夹具拦截 Supabase 认证、数据库、实时连接和照片请求。验证照片待响应及返回失败时，两种身份都能进入 Feed，正常照片仍显示；单张重试不重复下载正常照片；已有云端照片缺失时，模拟保存仍保留照片引用。未写入生产数据。

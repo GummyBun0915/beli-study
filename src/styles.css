@@ -444,3 +444,26 @@ h1,h2,h3,p { margin-top: 0; }
 .add-place-form div button { min-height: 36px; padding: 0 14px; border: 1px solid #d6dfdc; border-radius: 6px; background: white; color: var(--teal); font-size: 12px; font-weight: 700; }
 .add-place-form div button.primary { background: var(--teal); border-color: var(--teal); color: white; }
 .add-place-form div button:disabled { opacity: .45; }
+
+.visit-photo-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 12px;
+  margin: 6px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.visit-photo-status button {
+  min-height: 36px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--teal);
+  font: inherit;
+  font-weight: 700;
+}

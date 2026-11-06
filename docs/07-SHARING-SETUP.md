@@ -58,18 +58,7 @@ Publishable key: sb_publishable_……
 
 ## Step 5 — 连接 GitHub Pages
 
-在项目的新 GitHub 仓库里：
-
-1. 打开 **Settings → Secrets and variables → Actions → Variables**。
-2. 新增 Repository variables：
-
-| Name | Value |
-|---|---|
-| `VITE_SUPABASE_URL` | 你的 Project URL |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | 你的 publishable/anon key |
-
-3. 打开 **Actions**，重新运行 **Deploy Pages** 工作流。
-4. 完成后打开网页，第一屏应为 WXY / LHJ 身份选择和密码输入；成功登录后才显示首页。
+当前 Pages 工作流从仓库的 `.env.production` 读取 `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_PUBLISHABLE_KEY`，不读取 GitHub Actions Variables 中的这两项。只有更换项目时才需要更新该文件并重新部署；文件只放公开连接配置。发布后打开网页，第一屏应显示 WXY / LHJ 和密码输入。
 
 本地联调时，复制根目录 `.env.example` 为 `.env.local`，填写相同两项，再重启 `npm run dev`。`.env.local` 不提交到 Git。
 

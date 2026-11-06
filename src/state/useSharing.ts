@@ -8,6 +8,9 @@ import { emptySnapshot, normalizeSnapshot, type FoodSnapshot, type FoodStateCont
 export interface Member { user_id: string; display_name: string; avatar_letter: string; avatar_color: string }
 export interface SharedState { user_id: string; payload: FoodSnapshot; revision: number }
 interface Space { id: string; name: string; owner_id: string }
+const photoIds = (payload: FoodSnapshot) => new Set(
+  [...Object.values(payload.logs), ...Object.values(payload.visits).flat()].flatMap(log => log.photoIds)
+);
 interface SharedWant { restaurant_id: string; added_by: string }
 export function useSharing(food: FoodStateController) {
   const [userId,setUserId]=useState<string|null>(null);
@@ -31,13 +34,35 @@ export function useSharing(food: FoodStateController) {
   const [tick,setTick]=useState(0);
   const revision=useRef(0);const lastSynced=useRef('');const queue=useRef(Promise.resolve());const conflict=useRef(false);
   const restore=food.restore;
-  const photoTransfer=useCallback(async(payload:FoodSnapshot,sid:string,uid:string,upload:boolean)=>{
+  const spaceId = space?.id;
+  const loadPhoto = useCallback(async (ownerId: string, id: string, retry: boolean, signal: AbortSignal) => {
+    if (!client || !spaceId || !userId || !ownerId) return null;
+    const path = `${spaceId}/${ownerId}/${id}`;
+    if (!retry) {
+      const cached = await readPhoto(path).catch(() => null);
+      if (cached) return cached;
+      if (ownerId === userId) {
+        const local = await readPhoto(id).catch(() => null);
+        if (local) return local;
+      }
+    }
+    const { data, error } = await client.storage.from('beli-photos').download(path, {}, {
+      signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]),
+      cache: retry ? 'reload' : 'default',
+    });
+    if (error) throw error;
+    if (data && !signal.aborted) void cachePhoto(path, data).catch(() => {});
+    return data;
+  }, [spaceId, userId]);
+  const uploadNewPhotos = useCallback(async(payload:FoodSnapshot,sid:string,uid:string,synced:string)=>{
     if(!client)return;
-    for(const id of new Set([...Object.values(payload.logs),...Object.values(payload.visits || {}).flat()].flatMap(log=>log.photoIds))){
-      const path=`${sid}/${uid}/${id}`;const blob=await readPhoto(id);
-      if(upload&&!blob)throw new Error('本机缺少待同步照片，请先重新载入云端记录。');
-      if(upload&&blob){const {error}=await client.storage.from('beli-photos').upload(path,blob,{upsert:false,contentType:blob.type});if(error&&error.statusCode!=='409')throw error;}
-      if(!upload&&!blob){const {data,error}=await client.storage.from('beli-photos').download(path);if(error)throw error;if(data)await cachePhoto(id,data);}
+    const existing = synced ? photoIds(JSON.parse(synced)) : new Set<string>();
+    for (const id of photoIds(payload)) {
+      if (existing.has(id)) continue;
+      const blob=await readPhoto(id);
+      if(!blob)throw new Error('本机缺少待同步照片，请先重新载入云端记录。');
+      const {error}=await client.storage.from('beli-photos').upload(`${sid}/${uid}/${id}`,blob,{upsert:false,contentType:blob.type});
+      if(error&&error.statusCode!=='409')throw error;
     }
   },[]);
   const refresh=useCallback(async(sid:string)=>{
@@ -49,10 +74,9 @@ export function useSharing(food: FoodStateController) {
     ]);
     for(const result of results)if(result.error)throw result.error;
     const cleanRows=((results[1].data||[]) as unknown as SharedState[]).map(row=>({...row,payload:normalizeSnapshot(row.payload,new Set(restaurants.map(r=>r.id)))}));
-    await Promise.all(cleanRows.map(row=>photoTransfer(row.payload,sid,row.user_id,false)));
     setMembers((results[0].data||[]) as unknown as Member[]);setStates(cleanRows);setWants((results[2].data||[]) as unknown as SharedWant[]);
     return cleanRows;
-  },[photoTransfer]);
+  },[]);
   const loadSpace=useCallback(async(uid:string)=>{
     if(!client)return;setReady(false);setLoadedUserId(null);setLoading(true);setError('');
     const epoch=++identityEpoch.current;
@@ -74,14 +98,14 @@ export function useSharing(food: FoodStateController) {
       const {data,error:spaceError}=await client.from('beli_spaces').select('id,name,owner_id').eq('id',membership.space_id).single();if(spaceError)throw spaceError;
       if(epoch!==identityEpoch.current)return;
       const room=data as Space;setSpace(room);const rows=await refresh(room.id);if(epoch!==identityEpoch.current)return;const own=rows?.find(r=>r.user_id===uid);
-      if(own){await photoTransfer(own.payload,room.id,uid,false);if(epoch!==identityEpoch.current)return;try{if(JSON.stringify(local)!==JSON.stringify(own.payload))localStorage.setItem(`beli-before-cloud-backup:${uid}`,JSON.stringify(local));setHasLocalBackup(!!localStorage.getItem(`beli-before-cloud-backup:${uid}`));}catch{/* no overwrite of cloud data */}restore(own.payload);lastSynced.current=JSON.stringify(own.payload);revision.current=own.revision;}
+      if(own){try{if(JSON.stringify(local)!==JSON.stringify(own.payload))localStorage.setItem(`beli-before-cloud-backup:${uid}`,JSON.stringify(local));setHasLocalBackup(!!localStorage.getItem(`beli-before-cloud-backup:${uid}`));}catch{/* no overwrite of cloud data */}restore(own.payload);lastSynced.current=JSON.stringify(own.payload);revision.current=own.revision;}
       else{revision.current=0;lastSynced.current='';if(room.owner_id!==uid)restore(emptySnapshot('empty'));}
       conflict.current=false;setStatus(own?'已同步':'准备首次同步');setReady(true);setLoadedUserId(uid);
     }catch(err){if(epoch===identityEpoch.current)setError(err instanceof Error?err.message:'连接失败');}
     finally{if(epoch===identityEpoch.current)setLoading(false);}
   // Only identity and explicit reloads load the cloud snapshot; local edits must never trigger a download.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[refresh,restore,photoTransfer]);
+  },[refresh,restore]);
   useEffect(()=>{
     const hash=decodeURIComponent(location.hash);if(hash.startsWith('#/join/')){const token=hash.slice(7);sessionStorage.setItem('beli-invite',token);setInvite(token);location.hash='/profile';}
     if(!client){setAuthReady(true);return;}
@@ -117,10 +141,10 @@ export function useSharing(food: FoodStateController) {
     const epoch=identityEpoch.current;const payload=food.snapshot;const json=JSON.stringify(payload);if(json===lastSynced.current)return;
     const timer=setTimeout(()=>{queue.current=queue.current.then(async()=>{
       if(!client||epoch!==identityEpoch.current||conflict.current||json===lastSynced.current)return;setStatus('正在同步');setError('');
-      try{await photoTransfer(payload,space.id,userId,true);if(epoch!==identityEpoch.current)return;const {data,error}=await client.rpc('beli_save_state',{target_space:space.id,state_payload:payload,expected_revision:revision.current});if(error)throw error;if(epoch!==identityEpoch.current)return;revision.current=Number(data);lastSynced.current=json;setStatus('已同步');await refresh(space.id);}
+      try{await uploadNewPhotos(payload,space.id,userId,lastSynced.current);if(epoch!==identityEpoch.current)return;const {data,error}=await client.rpc('beli_save_state',{target_space:space.id,state_payload:payload,expected_revision:revision.current});if(error)throw error;if(epoch!==identityEpoch.current)return;revision.current=Number(data);lastSynced.current=json;setStatus('已同步');await refresh(space.id);}
       catch(err){const message=err instanceof Error?err.message:String((err as {message?:string})?.message||'同步失败');if(message.includes('SYNC_CONFLICT')){conflict.current=true;setReady(false);setError('另一台设备已有更新，请先载入云端记录。');}else setError(message);setStatus('同步未完成');}
     });},700);return()=>clearTimeout(timer);
-  },[food.snapshot,space,userId,ready,tick,photoTransfer,refresh]);
+  },[food.snapshot,space,userId,ready,tick,uploadNewPhotos,refresh]);
   const signIn=async(name:IdentityName,password:string)=>{if(!client)throw new Error('暂时无法连接，请稍后重试');setError('');const identity=identities.find(item=>item.name===name);if(!identity)throw new Error('请选择身份');const {error}=await client.auth.signInWithPassword({email:identity.email,password});if(error)throw new Error((error.code==='invalid_credentials'||/invalid login credentials/i.test(error.message))?'密码不正确，请重试':'暂时无法登录，请稍后重试');};
   const changePassword=async(password:string)=>{if(!client)return;const {error}=await client.auth.updateUser({password});if(error)throw error;};
   const updateName=async(name:string)=>{if(!client||!space)return;const {error}=await client.rpc('beli_update_name',{member_name:name});if(error)throw error;await refresh(space.id);};
@@ -140,6 +164,6 @@ export function useSharing(food: FoodStateController) {
       restore(emptySnapshot('empty'));localStorage.removeItem('beli-food-owner');
     }catch{setError('退出未完成，请检查网络或本机存储后重试。');setLoadedUserId(uid);setReady(wasReady);}
   };
-  return{configured:!!client,authReady,loadedUserId,userId,accountName,space,members,states,wants,status:realtimeStatus||status,error,invite,ready,loading,hasLocalBackup,downloadLocalBackup,signIn,changePassword,updateName,sendLink,create,join,inviteLink,toggleWant,retry:()=>setTick(v=>v+1),reloadCloud:()=>userId?loadSpace(userId):Promise.resolve(),signOut};
+  return{loadPhoto,configured:!!client,authReady,loadedUserId,userId,accountName,space,members,states,wants,status:realtimeStatus||status,error,invite,ready,loading,hasLocalBackup,downloadLocalBackup,signIn,changePassword,updateName,sendLink,create,join,inviteLink,toggleWant,retry:()=>setTick(v=>v+1),reloadCloud:()=>userId?loadSpace(userId):Promise.resolve(),signOut};
 }
 export type SharingController=ReturnType<typeof useSharing>;
