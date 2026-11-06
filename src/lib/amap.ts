@@ -44,15 +44,17 @@ function toPlace(poi: any, addedAt: string): PlaceRecord | null {
 }
 
 /** Restaurant POIs only (高德分类「餐饮服务」). `city` limits results when given. */
-export async function searchPlaces(keyword: string, city?: string): Promise<PlaceRecord[]> {
+export async function searchPlaces(keyword: string, city?: string, near?: {lng:number;lat:number}): Promise<PlaceRecord[]> {
   const AMap = await loadAmap();
   return new Promise((resolve, reject) => {
     const search = new AMap.PlaceSearch({ type: '餐饮服务', pageSize: 20, pageIndex: 1, city: city || '全国', citylimit: Boolean(city), extensions: 'base' });
-    search.search(keyword, (status: string, result: any) => {
+    const callback = (status: string, result: any) => {
       if (status === 'no_data') return resolve([]);
       if (status !== 'complete') return reject(new Error(result === 'INVALID_USER_DOMAIN' ? '当前网址不在高德 key 的域名白名单内' : typeof result === 'string' ? `高德搜索失败：${result}` : '高德搜索失败'));
       const addedAt = new Date().toISOString();
       resolve((result?.poiList?.pois || []).map((poi: any) => toPlace(poi, addedAt)).filter(Boolean));
-    });
+    };
+    if (near && AMap.convertFrom) AMap.convertFrom([near.lng, near.lat], 'gps', (status: string, result: any) => { if(status === 'complete' && result.locations?.[0]) search.searchNearBy(keyword, result.locations[0], 50000, callback); else reject(new Error('定位坐标转换失败，请重新定位')); });
+    else if (near) search.searchNearBy(keyword, [near.lng, near.lat], 50000, callback); else search.search(keyword, callback);
   });
 }

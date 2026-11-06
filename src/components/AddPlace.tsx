@@ -8,7 +8,7 @@ type Provider = 'amap' | 'osm';
 const providerLabel: Record<Provider, string> = { amap: '高德', osm: 'OpenStreetMap' };
 
 /** Adds restaurants that are not in the catalogue: AMap for mainland China, OpenStreetMap abroad, or typed in. */
-export function AddPlace({ query, searchCity, catalog, visibleIds, onAdd, onOpen }: { query: string; searchCity: string; catalog: Restaurant[]; visibleIds: ReadonlySet<string>; onAdd: (place: PlaceRecord) => void; onOpen: (restaurant: Restaurant) => void }) {
+export function AddPlace({ query, searchCity, catalog, visibleIds, onAdd, onOpen, location }: { location?: {lng:number;lat:number}; query: string; searchCity: string; catalog: Restaurant[]; visibleIds: ReadonlySet<string>; onAdd: (place: PlaceRecord) => void; onOpen: (restaurant: Restaurant) => void }) {
   const keyword = query.trim();
   const overseas = isOverseasRegion(searchCity);
   const primary: Provider = overseas || !amapConfigured ? 'osm' : 'amap';
@@ -20,9 +20,9 @@ export function AddPlace({ query, searchCity, catalog, visibleIds, onAdd, onOpen
   // OSM ranking bias: the centre of the catalogue's restaurants in the chosen region.
   const near = useMemo(() => {
     const points = catalog.filter(r => r.regionSlug === searchCity && r.mapLng !== null && r.mapLat !== null);
-    return points.length ? { lng: points.reduce((sum, r) => sum + r.mapLng!, 0) / points.length, lat: points.reduce((sum, r) => sum + r.mapLat!, 0) / points.length } : undefined;
-  }, [catalog, searchCity]);
-  const searchKey = `${searchCity}|${keyword}`;
+    return searchCity === 'all' && location ? location : points.length ? { lng: points.reduce((sum, r) => sum + r.mapLng!, 0) / points.length, lat: points.reduce((sum, r) => sum + r.mapLat!, 0) / points.length } : undefined;
+  }, [catalog, searchCity, location]);
+  const searchKey = `${searchCity}|${keyword}|${location?.lng ?? ''}|${location?.lat ?? ''}`;
   const [found, setFound] = useState<{ key: string; provider: Provider; loading: boolean; results: PlaceRecord[]; error: string } | null>(null);
   const [manual, setManual] = useState<{ name: string; city: string; address: string; country: string } | null>(null);
   const requestId = useRef(0);
@@ -32,7 +32,7 @@ export function AddPlace({ query, searchCity, catalog, visibleIds, onAdd, onOpen
     const key = searchKey;
     const id = ++requestId.current;
     setFound({ key, provider, loading: true, results: [], error: '' });
-    const request = provider === 'amap' ? searchPlaces(keyword, searchCity === 'all' ? undefined : regionName(searchCity)) : searchOsmPlaces(keyword, near, regionCountry(searchCity));
+    const request = provider === 'amap' ? searchPlaces(keyword, searchCity === 'all' ? undefined : regionName(searchCity), searchCity === 'all' ? location : undefined) : searchOsmPlaces(keyword, near, regionCountry(searchCity));
     request
       .then(results => { if (requestId.current === id) setFound(current => current?.key === key && current.provider === provider ? { ...current, loading: false, results } : current); })
       .catch((error: unknown) => { if (requestId.current === id) setFound(current => current?.key === key && current.provider === provider ? { ...current, loading: false, error: error instanceof Error ? error.message : '搜索失败' } : current); });
@@ -45,7 +45,7 @@ export function AddPlace({ query, searchCity, catalog, visibleIds, onAdd, onOpen
     if (chars < 2) { setFound({ key: searchKey, provider: primary, loading: false, results: [], error: '再输入一个字开始搜索' }); return; }
     setFound({ key: searchKey, provider: primary, loading: true, results: [], error: '' });
     const timer = window.setTimeout(() => {
-      const request = primary === 'amap' ? searchPlaces(keyword, searchCity === 'all' ? undefined : regionName(searchCity)) : searchOsmPlaces(keyword, near, regionCountry(searchCity));
+      const request = primary === 'amap' ? searchPlaces(keyword, searchCity === 'all' ? undefined : regionName(searchCity), searchCity === 'all' ? location : undefined) : searchOsmPlaces(keyword, near, regionCountry(searchCity));
       request
         .then(results => { if (requestId.current === id) setFound(current => current?.key === searchKey && current.provider === primary ? { ...current, loading: false, results } : current); })
         .catch((error: unknown) => { if (requestId.current === id) setFound(current => current?.key === searchKey && current.provider === primary ? { ...current, loading: false, error: error instanceof Error ? error.message : '搜索失败' } : current); });

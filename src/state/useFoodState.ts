@@ -1,3 +1,4 @@
+import historicalScores from '../data/historical-scores.json';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { isPlaceId, mergePlaces, regions, type PlaceRecord, type Restaurant } from '../data/restaurants';
 
@@ -12,6 +13,7 @@ export interface VisitLog {
   visitedAt: string;
   photoIds: string[];
   branch?: string;
+  score?: number;
 }
 export interface VisitEntry extends VisitLog { id: string; recordedAt: string }
 export interface FoodFrame {
@@ -21,6 +23,7 @@ export interface FoodFrame {
   visits: Record<string, VisitEntry[]>;
 }
 export interface FoodSnapshot extends FoodFrame {
+  sourceHistoryApplied?: boolean;
   version: 2;
   baseline: 'source' | 'empty';
   history: FoodFrame[];
@@ -64,6 +67,7 @@ export function normalizeSnapshot(input: unknown, catalogIds: Set<string>, inher
   const raw = input as Partial<FoodSnapshot>;
   const result = emptySnapshot(raw.baseline === 'empty' ? 'empty' : 'source');
   if (raw.version !== 2) return result;
+  result.sourceHistoryApplied = raw.sourceHistoryApplied === true;
   result.places = inheritedPlaces ?? cleanPlaces(raw.places);
   const ids = { has: (id: string) => catalogIds.has(id) || Boolean(result.places[id]) };
   for (const [id, value] of Object.entries(raw.statuses || {})) {
@@ -73,6 +77,7 @@ export function normalizeSnapshot(input: unknown, catalogIds: Set<string>, inher
     if (!ids.has(id) || !value || !sentiments.includes(value.sentiment)) continue;
     result.logs[id] = {
       sentiment: value.sentiment,
+      score: typeof value.score === 'number' && value.score >= 0 && value.score <= 10 ? value.score : undefined,
       category: typeof value.category === 'string' ? value.category.slice(0, 40) : 'Restaurants',
       notes: typeof value.notes === 'string' ? value.notes.slice(0, 10000) : '',
       branch: typeof value.branch === 'string' ? value.branch.slice(0, 200) : '',
@@ -115,18 +120,23 @@ function initialState(ids: Set<string>): FoodSnapshot {
   } catch { return emptySnapshot(); }
 }
 export function statusFromSnapshot(state: FoodSnapshot, r: Restaurant): FoodStatus {
-  return state.statuses[r.id] ?? (state.baseline === 'source' && !r.place ? r.status : 'none');
+  return state.baseline === 'source' && !r.place ? 'been' : state.statuses[r.id] ?? 'none';
 }
 export function rankedFromSnapshot(state: FoodSnapshot, restaurants: Restaurant[]): RankedRestaurant[] {
   const byId = new Map(restaurants.map(r => [r.id, r]));
   const ordered = state.order.filter(id => { const r = byId.get(id); return r && state.logs[id] && statusFromSnapshot(state, r) === 'been'; });
-  return sentiments.flatMap(sentiment => {
+  const ranked = sentiments.flatMap(sentiment => {
     const bucket = ordered.filter(id => state.logs[id].sentiment === sentiment);
     const [low, high] = sentiment === 'liked' ? [6.7, 10] : sentiment === 'fine' ? [3.4, 6.6] : [0, 3.3];
     return bucket.map((id, index) => ({ restaurant: byId.get(id)!, sentiment,
-      score: Math.round((low + (high - low) * (bucket.length - index) / (bucket.length + 1)) * 10) / 10,
+      score: state.logs[id].score ?? Math.round((low + (high - low) * (bucket.length - index) / (bucket.length + 1)) * 10) / 10,
       wins: 0, losses: 0, comparisons: 0 }));
   });
+  if (state.baseline === 'source') for (const r of restaurants) {
+    const score = (historicalScores as Record<string, number>)[r.id];
+    if (!r.place && score !== undefined && !ranked.some(item => item.restaurant.id === r.id)) ranked.push({restaurant:r,score,sentiment:score>=6.7?'liked':score>=3.4?'fine':'disliked',wins:0,losses:0,comparisons:0});
+  }
+  return ranked.sort((a,b)=>b.score-a.score);
 }
 export function useFoodState(catalog: Restaurant[]) {
   const ids = useMemo(() => new Set(catalog.map(r => r.id)), [catalog]);
@@ -153,7 +163,7 @@ export function useFoodState(catalog: Restaurant[]) {
   }, [update]);
   const ranked = useMemo(() => rankedFromSnapshot(snapshot, restaurants), [snapshot, restaurants]);
   const getScore = useCallback((id: string): number | null => ranked.find(r => r.restaurant.id === id)?.score ?? null, [ranked]);
-  const getLog = useCallback((id: string): VisitLog | null => snapshot.logs[id] ?? null, [snapshot.logs]);
+  const getLog = useCallback((id: string): VisitLog | null => snapshot.logs[id] ?? (snapshot.baseline === 'source' && byId.get(id) && !byId.get(id)!.place ? {sentiment:'liked',category:'Restaurants',notes:byId.get(id)!.reviewText,tags:[],dishes:byId.get(id)!.dishes.map(d=>d.name),branch:byId.get(id)!.branch || '',visitedAt:byId.get(id)!.visitedAt?.slice(0,10) || '',photoIds:[],score:(historicalScores as Record<string,number>)[id]} : snapshot.visits[id]?.at(-1) ?? null), [snapshot, byId]);
   const completeRanking = useCallback((id: string, log: VisitLog, position: number, addVisit = true) => {
     const visit: VisitEntry = { ...log, id: crypto.randomUUID(), recordedAt: new Date().toISOString() };
     update(s => {
@@ -168,6 +178,9 @@ export function useFoodState(catalog: Restaurant[]) {
       return { ...s, logs, order, visits, statuses: { ...s.statuses, [id]: 'been' }, history: [...s.history, previous].slice(-20) };
     });
   }, [ids, update]);
+  const editHistory = useCallback((id: string, log: VisitLog) => {
+    update(s => ({...s, logs:{...s.logs,[id]:log}, order:[...new Set([...s.order,id])], statuses:{...s.statuses,[id]:'been'}, visits:s.visits[id]?.length ? {...s.visits,[id]:s.visits[id].map((v,i)=>i===s.visits[id].length-1?{...v,...log}:v)} : s.visits}));
+  }, [update]);
   const saveVisit = useCallback((id: string, log: VisitLog) => {
     const visit: VisitEntry = { ...log, id: crypto.randomUUID(), recordedAt: new Date().toISOString() };
     update(s => !known(s, id) ? s : ({ ...s, statuses: { ...s.statuses, [id]: 'been' },
@@ -179,7 +192,7 @@ export function useFoodState(catalog: Restaurant[]) {
   }), [update]);
   const restore = useCallback((value: unknown) => update(() => normalizeSnapshot(value, ids)), [ids, update]);
   const reset = useCallback(() => update(s => ({ ...emptySnapshot(s.baseline), places: s.places })), [update]);
-  return { snapshot, restaurants, getStatus, setStatus, addPlace, getScore, getLog, completeRanking, saveVisit, undoComparison, ranked,
+  return { snapshot, restaurants, getStatus, setStatus, addPlace, getScore, getLog, editHistory, completeRanking, saveVisit, undoComparison, ranked,
     comparisonHistory: snapshot.history, reset, restore, storageError };
 }
 export type FoodStateController = ReturnType<typeof useFoodState>;

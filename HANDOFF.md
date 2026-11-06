@@ -95,3 +95,7 @@ GitHub connector 已认证为 GummyBun0915，有目标仓库 push/admin 权限�
 - 加店（`src/components/AddPlace.tsx`）：国内走高德；海外地区（日本/新加坡/泰国）走 Photon/OpenStreetMap（`src/lib/osm.ts`，免费免 key、按地区国家代码过滤、界面标注 OSM 版权）；都搜不到可手动填店名/城市/地址（无坐标，不上地图）。PlaceRecord 新增 `source`（amap/osm/manual）和 `country`；海外店导航跳 Google 地图。
 - 没用 Google Places：需要用户绑卡开通，且条款不允许长期保存店名/地址（只能存 Place ID）。
 - 线上已用真实高德底图（深圳 24 个定位针、点击出预览）和真实 Photon（日本一蘭、新加坡 Jumbo Seafood）验证；本地 `npm run test:amap` 覆盖桩测试。
+
+## 2026-11-06 第二轮修复
+
+用户重新明确：原有目录全是 WXY 去过；五星制要转十分制。只读工作簿发现 24 个已有十分制评分，21 个可按 ID 精确显示，3 个未映射（见数据映射文档）。修正静态 Been 基线、账号基线隔离、Been 点击误切 Want、历史编辑默认预填且不新增 VisitEntry、榜单上传照片、定位搜索入口；个人编辑支持直接十分制。新回归 tests/history-regression.mjs 使用拦截服务，不写生产。旧 tests/ui.mjs 中“空白 WXY、每次入口新增用餐”的断言已不符合新要求，后续须迁移旧覆盖。

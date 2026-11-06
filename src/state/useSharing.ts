@@ -73,7 +73,8 @@ export function useSharing(food: FoodStateController) {
       client.from('beli_wants').select('restaurant_id,added_by').eq('space_id',sid),
     ]);
     for(const result of results)if(result.error)throw result.error;
-    const cleanRows=((results[1].data||[]) as unknown as SharedState[]).map(row=>({...row,payload:normalizeSnapshot(row.payload,new Set(restaurants.map(r=>r.id)))}));
+    const session=(await client.auth.getSession()).data.session;
+    const cleanRows=((results[1].data||[]) as unknown as SharedState[]).map(row=>({...row,payload:normalizeSnapshot({...row.payload,baseline:(row.user_id===session?.user.id ? identityForEmail(session?.user.email)?.name==='WXY' : identityForEmail(session?.user.email)?.name==='LHJ')?'source':'empty'},new Set(restaurants.map(r=>r.id)))}));
     setMembers((results[0].data||[]) as unknown as Member[]);setStates(cleanRows);setWants((results[2].data||[]) as unknown as SharedWant[]);
     return cleanRows;
   },[]);
@@ -98,7 +99,7 @@ export function useSharing(food: FoodStateController) {
       const {data,error:spaceError}=await client.from('beli_spaces').select('id,name,owner_id').eq('id',membership.space_id).single();if(spaceError)throw spaceError;
       if(epoch!==identityEpoch.current)return;
       const room=data as Space;setSpace(room);const rows=await refresh(room.id);if(epoch!==identityEpoch.current)return;const own=rows?.find(r=>r.user_id===uid);
-      if(own){try{if(JSON.stringify(local)!==JSON.stringify(own.payload))localStorage.setItem(`beli-before-cloud-backup:${uid}`,JSON.stringify(local));setHasLocalBackup(!!localStorage.getItem(`beli-before-cloud-backup:${uid}`));}catch{/* no overwrite of cloud data */}restore(own.payload);lastSynced.current=JSON.stringify(own.payload);revision.current=own.revision;}
+      if(own){const originalPayload=JSON.stringify(own.payload);own.payload={...own.payload,baseline:identityForEmail((await client.auth.getSession()).data.session?.user.email)?.name==='WXY'?'source':'empty'};if(own.payload.baseline==='source'&&!own.payload.sourceHistoryApplied){own.payload={...own.payload,sourceHistoryApplied:true,statuses:{...own.payload.statuses,...Object.fromEntries(Object.keys(own.payload.places||{}).map(id=>[id,'been' as const]))}};}try{if(JSON.stringify(local)!==JSON.stringify(own.payload))localStorage.setItem(`beli-before-cloud-backup:${uid}`,JSON.stringify(local));setHasLocalBackup(!!localStorage.getItem(`beli-before-cloud-backup:${uid}`));}catch{/* no overwrite of cloud data */}restore(own.payload);lastSynced.current=originalPayload;revision.current=own.revision;}
       else{revision.current=0;lastSynced.current='';if(room.owner_id!==uid)restore(emptySnapshot('empty'));}
       conflict.current=false;setStatus(own?'已同步':'准备首次同步');setReady(true);setLoadedUserId(uid);
     }catch(err){if(epoch===identityEpoch.current)setError(err instanceof Error?err.message:'连接失败');}

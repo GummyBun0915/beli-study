@@ -51,3 +51,11 @@ node scripts/sync-source.mjs /Users/jiguang/Desktop/Personal/01_个人项目/dac
 ## New interaction records (2026-10-22)
 
 Version 2 user state separates Restaurant identity from `VisitEntry[]`. Each visit has a UUID, recordedAt, optional actual visit date, branch, notes, dishes, labels, sentiment and photo IDs. One restaurant keeps one ranking slot; a visit can be saved without reranking. Source histories do not establish visit counts. The second shared member starts with an empty baseline (`none`), not WXY's imported been/want defaults. Source guide levels remain in the raw snapshot only and have been removed from product-facing labels and recommendation logic.
+
+## 2026-11-06 历史归属与评分修复
+
+用户确认现有 77 家目录均已去过：其中静态投影仍为 75 家，另有用户加入的 POI。WXY 的全部静态店归 Been；首次升级时其已存在的自建 POI 也归 Been，之后新检索添加的店仍由用户决定 Want / Been。LHJ 不继承 source 基线；公共餐厅目录和共同 Feed 可见不等于个人去过。
+
+只读读取上游 `data/大吃特吃-餐厅名录.xlsx`：评分列已有 24 个十分制值，保存为 `src/data/historical-scores.json`；21 个 ID 与公开目录精确匹配，另三个 ID（r_c2900e2e / r_c04ac278 / r_8ffbb7e1）未映射，未强塞给同名店。没有评分的记录仍缺分。显式五星制应乘二，现有评分列为十分制，保持原值。用户的新评分优先于历史值，历史值不经过比较公式重算。
+
+图片：预置图片位于本站 public/images/r，上传图片位于 Supabase 私有 beli-photos，浏览器 IndexedDB beli-local-photos 用于本机缓存；未接入 iCloud Photos，同步相册增删不会自动反映在本项目。
