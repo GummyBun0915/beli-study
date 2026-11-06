@@ -1,7 +1,7 @@
 import {chromium} from 'playwright-core';
 import assert from 'node:assert/strict';
 import {mockSharing} from './helpers/mock-sharing.mjs';
-const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
+const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
 try{
  const p=await browser.newPage({viewport:{width:390,height:844}});const service=await mockSharing(p,{loggedIn:false});await p.goto('http://127.0.0.1:4179/beli-study/');await p.getByLabel('私人访问码',{exact:true}).waitFor();assert.equal(await p.getByRole('group',{name:'选择身份'}).count(),0);assert(!/LHJ|邀请|二人/.test(await p.locator('body').innerText()));
  const initialSave=p.waitForResponse(r=>r.url().includes('/rest/v1/rpc/beli_save_state'));const request=p.waitForRequest(r=>r.url().includes('/auth/v1/token'));await p.getByLabel('私人访问码',{exact:true}).fill('fixture-private-code');await p.getByRole('button',{name:'进入日记',exact:true}).click();assert.equal((await request).postDataJSON().email,'wxy@beli.example.com');await p.locator('.feed-date-filter').waitFor();assert.equal(await p.locator('.feed-post[data-author="LHJ"]').count(),0);
