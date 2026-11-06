@@ -1,5 +1,5 @@
 {
-  "testedAt": "2026-11-06T07:03:29.558Z",
+  "testedAt": "2026-11-06T07:05:48.140Z",
   "passed": [
     "multiple visits remain separate",
     "no score is generated without a comparison; explicit ranking creates the first score",
