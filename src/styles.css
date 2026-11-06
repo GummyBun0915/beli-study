@@ -468,3 +468,7 @@ h1,h2,h3,p { margin-top: 0; }
   font: inherit;
   font-weight: 700;
 }
+.rank-photo .feed-gallery { margin-top: 0; width: 56px; height: 56px; }
+.rank-photo .feed-gallery .photo-slide { height: 56px; }
+.rank-photo .carousel-dots, .rank-photo .carousel-count, .rank-photo .carousel-arrow { display: none; }
+.rank-photo .visit-photo-status { font-size: 9px; }
