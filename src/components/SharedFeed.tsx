@@ -8,6 +8,11 @@ import { sharedFeed } from '../state/sharedFeed';
 import { LocalPhotos } from './VisitTimeline';
 import { PhotoCarousel, PhotoViewer } from './PhotoGallery';
 
+function logPhotos(snapshot: FoodStateController['snapshot'], id: string) {
+  const covered = new Set((snapshot.visits[id] || []).flatMap(visit => visit.photoIds));
+  return (snapshot.logs[id]?.photoIds || []).filter(photoId => !covered.has(photoId));
+}
+
 export function SharedFeed({ catalog, food, sharing, onOpen, onRecord }: { catalog: Restaurant[]; food: FoodStateController; sharing: SharingController; onOpen: (restaurant: Restaurant) => void; onRecord: () => void }) {
   const [limit, setLimit] = useState(24);
   const [gallery, setGallery] = useState<{ restaurant: Restaurant; index: number } | null>(null);
@@ -48,11 +53,12 @@ export function SharedFeed({ catalog, food, sharing, onOpen, onRecord }: { catal
     {posts.slice(0, limit).map(post => {
       const { author, restaurant: r, visit } = post;
       const entry=visit||post.log;
+      const savedPhotos = post.kind==='history' ? logPhotos(food.snapshot, r.id) : [];
       const notes = post.kind==='history' ? entry?.notes ?? r.reviewText : entry?.notes || '';
       const dishes = post.kind==='history' ? entry?.dishes ?? r.dishes.map(dish => dish.name) : entry?.dishes.filter(Boolean) || [];
       return <article className="feed-post" key={post.id} data-author={author.display_name} data-kind={post.kind} data-restaurant={r.id}>
         <button className="post-head" onClick={() => onOpen(r)}><span className="mini-avatar" style={{ background: author.avatar_color }}>{author.avatar_letter}</span><span><strong>{author.display_name} {post.kind==='status'?'标记去过':'记录了'} {r.brand}</strong><small>{entry?.branch || r.actualCity}{r.cuisineTags.length ? ` · ${r.cuisineTags.slice(0, 3).join(' · ')}` : ''}</small></span><ChevronRight size={17}/></button>
-        {post.kind!=='history' ? entry && <LocalPhotos ownerId={author.user_id} loadPhoto={sharing.loadPhoto} ids={entry.photoIds} label={`${author.display_name} · ${r.displayName}`}/> : r.images.length > 0 && <PhotoCarousel lazy className="feed-gallery" images={r.images} label={`${author.display_name} · ${r.displayName}`} onOpen={index => setGallery({ restaurant: r, index })}/>}
+        {post.kind!=='history' ? entry && <LocalPhotos ownerId={author.user_id} loadPhoto={sharing.loadPhoto} ids={entry.photoIds} label={`${author.display_name} · ${r.displayName}`}/> : <>{savedPhotos.length > 0 && <LocalPhotos ownerId={author.user_id} loadPhoto={sharing.loadPhoto} ids={savedPhotos} label={`${author.display_name} · ${r.displayName}`}/>}{r.images.length > 0 && <PhotoCarousel lazy className="feed-gallery" images={r.images} label={`${author.display_name} · ${r.displayName}`} onOpen={index => setGallery({ restaurant: r, index })}/>}</>}
         {notes && <p className="post-review"><strong>Notes:</strong> {notes}</p>}
         {dishes.length > 0 && <p className="post-dishes"><strong>Favorite Dishes:</strong> {dishes.join('、')}</p>}
         <div className="post-footer"><span>{post.kind==='history' ? entry?.visitedAt || formattedVisitDate(r) || '到访日期未记录' : entry?.visitedAt || '到访日期未填写'}</span>{post.score !== null && <span className="feed-author-score">{author.display_name} 当前评分 <b>{post.score.toFixed(1)}</b></span>}</div>

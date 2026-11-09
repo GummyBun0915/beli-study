@@ -183,9 +183,14 @@ export function useFoodState(catalog: Restaurant[]) {
   }, [update]);
   const saveVisit = useCallback((id: string, log: VisitLog) => {
     const visit: VisitEntry = { ...log, id: crypto.randomUUID(), recordedAt: new Date().toISOString() };
-    update(s => !known(s, id) ? s : ({ ...s, statuses: { ...s.statuses, [id]: 'been' },
-      visits: { ...s.visits, [id]: [...(s.visits[id] || []), visit] },
-      history: [...s.history, { statuses: s.statuses, logs: s.logs, order: s.order, visits: s.visits }].slice(-20) }));
+    update(s => {
+      if (!known(s, id)) return s;
+      const logs = { ...s.logs, [id]: log };
+      const order = typeof log.score === 'number' && !s.order.includes(id) ? [...s.order, id] : s.order;
+      return { ...s, logs, order, statuses: { ...s.statuses, [id]: 'been' },
+        visits: { ...s.visits, [id]: [...(s.visits[id] || []), visit] },
+        history: [...s.history, { statuses: s.statuses, logs: s.logs, order: s.order, visits: s.visits }].slice(-20) };
+    });
   }, [ids, update]);
   const undoComparison = useCallback(() => update(s => {
     const frame = s.history.at(-1); return frame ? { ...s, ...frame, history: s.history.slice(0, -1) } : s;

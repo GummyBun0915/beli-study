@@ -29,5 +29,9 @@ export function sharedFeed(members: Member[], states: SharedState[], ownId: stri
     const historyIds=new Set(history.map(post=>post.restaurant.id));
     const marked:FeedPost[]=restaurants.filter(restaurant=>statusFromSnapshot(state,restaurant)==='been'&&!state.visits[restaurant.id]?.length&&!historyIds.has(restaurant.id)).map(restaurant=>({id:`${author.user_id}:status:${restaurant.id}`,author,restaurant,kind:'status',log:state.logs[restaurant.id],sortDate:state.logs[restaurant.id]?.visitedAt||'',score:scores.get(restaurant.id)??null}));
     return [...visits, ...history, ...marked];
-  }).sort((a, b) => b.sortDate.localeCompare(a.sortDate) || (b.visit?.recordedAt || '').localeCompare(a.visit?.recordedAt || '') || a.id.localeCompare(b.id));
+  }).sort((a, b) => Number(rescued(b)) - Number(rescued(a)) || b.sortDate.localeCompare(a.sortDate) || (b.visit?.recordedAt || '').localeCompare(a.visit?.recordedAt || '') || a.id.localeCompare(b.id));
+}
+/** Undated meals the user already saved (photos, notes, or an explicit score) stay visible in all-time instead of sorting after imported history. */
+function rescued(post: FeedPost) {
+  return post.kind === 'status' && !post.sortDate && Boolean(post.log && (post.log.photoIds.length || post.log.notes.trim() || typeof post.log.score === 'number'));
 }
